@@ -46,6 +46,9 @@ class AuthServiceImpl(
     @Value("\${template_api.super-admin.password}")
     private lateinit var superAdminPassword: String
 
+    @Value("\${template_api.url-frontend}")
+    private lateinit var urlFrontend: String
+
     @Transactional(rollbackFor = [Exception::class])
     @PostConstruct
     fun initSuperAdmin() {
@@ -81,7 +84,7 @@ class AuthServiceImpl(
         )
 
         val subject = "Confirm your email and activated your account"
-        val text = "Click the link to confirm your email: http://localhost:8081/api/auth/confirm?token=${user.confirmationToken}"
+        val text = "Click the link to confirm your email: ${urlFrontend}/confirm?token=${user.confirmationToken}"
         sendEmail(user, subject, text)
         return "Check your email for confirmation link."
     }
@@ -104,9 +107,15 @@ class AuthServiceImpl(
         user.resetPasswordToken = token
         userAccountRepository.save(user)
         val subject = "Reset Password"
-        val text = "To reset your password, click the link below:\n http://localhost:8081/api/auth/reset-password?token=$token"
+        val text = "To reset your password, click the link below:\n ${urlFrontend}/reset-password?token=$token"
         sendEmail(user, subject, text)
         return "Password reset link sent to your email."
+    }
+
+    override fun validateToken(): UserAccount? {
+        val userId = SecurityContextHolder.getContext().authentication.name
+        println(userId)
+        return userAccountRepository.findAndGetById(userId.toInt()).orElse(null)
     }
 
     @Transactional(rollbackFor = [Exception::class])

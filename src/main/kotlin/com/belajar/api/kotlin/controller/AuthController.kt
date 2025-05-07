@@ -60,4 +60,16 @@ class AuthController(
     fun login(@RequestBody request: LoginRequest): ResponseEntity<WebResponse<LoginResponse>> =
         utilities.handleRequest ({ authService.login(request) }, HttpStatus.OK, StatusMessage.SUCCESS_LOGIN)
 
+    @Operation(summary = "Validate token")
+    @SecurityRequirement(name = "Authorization")
+    @GetMapping(path = ["/validate-token"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun validateToken(): ResponseEntity<WebResponse<Any>> {
+        val userAccount = authService.validateToken()
+        return if (userAccount != null) {
+            utilities.handleRequest({ userAccount }, HttpStatus.OK, StatusMessage.SUCCESS_RETRIEVE)
+        } else {
+            utilities.handleRequest({ "unauthorized" }, HttpStatus.UNAUTHORIZED, StatusMessage.UNAUTHORIZED)
+        }
+    }
+
 }
