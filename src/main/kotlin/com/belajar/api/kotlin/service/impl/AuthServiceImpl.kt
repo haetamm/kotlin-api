@@ -4,7 +4,7 @@ import com.belajar.api.kotlin.constant.UserRoleEnum
 import com.belajar.api.kotlin.entities.customer.NewAccountRequest
 import com.belajar.api.kotlin.entities.user.*
 import com.belajar.api.kotlin.exception.ForbiddenException
-import com.belajar.api.kotlin.exception.UnauthorizedException
+import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.model.UserAccount
 import com.belajar.api.kotlin.model.UserRole
 import com.belajar.api.kotlin.repository.UserAccountRepository
@@ -102,7 +102,7 @@ class AuthServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun forgotPassword(request: ForgotPasswordRequest): String {
         validationUtil.validate(request)
-        val user = userAccountRepository.findByEmail(request.email!!) ?: throw UnauthorizedException("Email not found")
+        val user = userAccountRepository.findByEmail(request.email!!) ?: throw NotFoundException("Email not found")
         val token = generateToken()
         user.resetPasswordToken = token
         userAccountRepository.save(user)
