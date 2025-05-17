@@ -78,9 +78,9 @@ class MenuController(
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'USER')")
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
     fun getAll(
-        @RequestParam(name = "name", required = false) name: String,
-        @RequestParam(name = "minPrice", required = false) minPrice: Long,
-        @RequestParam(name = "maxPrice", required = false) maxPrice: Long,
+        @RequestParam(name = "name", required = false, defaultValue = "all" ) name: String,
+        @RequestParam(name = "minPrice", required = false, defaultValue = "0") minPrice: Long,
+        @RequestParam(name = "maxPrice", required = false, defaultValue = "100000000") maxPrice: Long,
         @RequestParam(name = "direction", defaultValue = "asc") direction: String,
         @RequestParam(name = "sortBy", defaultValue = "name") sortBy: String,
         @RequestParam(name = "page", defaultValue = "1") page: Int,

@@ -12,17 +12,25 @@ class MenuSpecification {
         return Specification<Menu> { root, query, criteriaBuilder ->
             val predicates = mutableListOf<Predicate>()
 
-            request.name.let {
-                val nameFilter = criteriaBuilder.like(criteriaBuilder.upper(root.get("name")), "%${it.uppercase()}%")
+            // Filter nama hanya diterapkan jika name bukan "all" atau kosong
+            if (request.name.isNotBlank() && request.name != "all") {
+                val nameFilter = criteriaBuilder.like(
+                    criteriaBuilder.upper(root.get("name")),
+                    "%${request.name.uppercase()}%"
+                )
                 predicates.add(nameFilter)
             }
 
-            val newMinPrice = request.minPrice
-            val newMaxPrice = request.maxPrice
-            val priceFilter = criteriaBuilder.between(root.get("price"), newMinPrice, newMaxPrice)
+            // Filter harga hanya diterapkan jika minPrice dan maxPrice memiliki nilai valid
+            val priceFilter = criteriaBuilder.between(
+                root.get("price"),
+                request.minPrice,
+                request.maxPrice
+            )
             predicates.add(priceFilter)
 
-            query.where(*predicates.toTypedArray()).restriction
+            // Jika tidak ada predicate, kembalikan null untuk menghindari query kosong
+            if (predicates.isEmpty()) null else query.where(*predicates.toTypedArray()).restriction
         }
     }
 }
