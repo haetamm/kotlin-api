@@ -12,6 +12,14 @@ class MenuSpecification {
         return Specification<Menu> { root, query, criteriaBuilder ->
             val predicates = mutableListOf<Predicate>()
 
+            if (request.category.isNotBlank() && request.category != "all") {
+                val categoryFilter = criteriaBuilder.equal(
+                    root.get<Menu>("category").get<String>("name"), // Akses category.name
+                    request.category
+                )
+                predicates.add(categoryFilter)
+            }
+
             // Filter nama hanya diterapkan jika name bukan "all" atau kosong
             if (request.name.isNotBlank() && request.name != "all") {
                 val nameFilter = criteriaBuilder.like(

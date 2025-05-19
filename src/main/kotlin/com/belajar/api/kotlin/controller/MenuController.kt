@@ -78,6 +78,7 @@ class MenuController(
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'USER')")
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
     fun getAll(
+        @RequestParam(name = "category", required = false, defaultValue = "all") category: String,
         @RequestParam(name = "name", required = false, defaultValue = "all" ) name: String,
         @RequestParam(name = "minPrice", required = false, defaultValue = "0") minPrice: Long,
         @RequestParam(name = "maxPrice", required = false, defaultValue = "100000000") maxPrice: Long,
@@ -87,6 +88,7 @@ class MenuController(
         @RequestParam(name = "size", defaultValue = "10") size: Int
     ): ResponseEntity<WebResponse<List<MenuResponse>>> {
         val request = SearchMenuRequest(
+            category,
             name,
             minPrice,
             maxPrice,

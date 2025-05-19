@@ -1,6 +1,7 @@
 package com.belajar.api.kotlin.entities.menu
 
 data class SearchMenuRequest(
+    val category: String,
     val name: String,
     val minPrice: Long,
     val maxPrice: Long,
