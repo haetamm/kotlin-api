@@ -6,10 +6,10 @@ import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.Where
 
 @Entity
-@Table(name = TableName.M_MENU)
-@SQLDelete(sql = "UPDATE " + TableName.M_MENU + " SET deleted = true WHERE id = ?")
+@Table(name = TableName.M_CATEGORY)
+@SQLDelete(sql = "UPDATE " + TableName.M_CATEGORY + " SET deleted = true WHERE id = ?")
 @Where(clause = "deleted = false")
-data class Menu(
+data class Category(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: String? = null,
@@ -17,17 +17,9 @@ data class Menu(
     @Column(name = "name", nullable = false, unique = true)
     var name: String,
 
-    @Column(name = "price", nullable = false)
-    var price: Long,
-
     @Column(name = "deleted", nullable = false)
     var deleted: Boolean = false,
 
-    @OneToOne
-    @JoinColumn(name = "image_id", unique = true)
-    var image: Image? = null,
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    var category: Category
+    @OneToMany(mappedBy = "category", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
+    var menus: List<Menu> = mutableListOf()
 )

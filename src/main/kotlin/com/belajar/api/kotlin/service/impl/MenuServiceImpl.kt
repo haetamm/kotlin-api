@@ -10,8 +10,8 @@ import com.belajar.api.kotlin.entities.menu.UpdateMenuRequest
 import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.exception.ValidationCustomException
 import com.belajar.api.kotlin.model.Menu
-import com.belajar.api.kotlin.model.UserAccount
 import com.belajar.api.kotlin.repository.MenuRepository
+import com.belajar.api.kotlin.service.CategoryService
 import com.belajar.api.kotlin.service.ImageService
 import com.belajar.api.kotlin.service.MenuService
 import com.belajar.api.kotlin.specification.MenuSpecification
@@ -28,7 +28,8 @@ class MenuServiceImpl(
     private val imageService: ImageService,
     private val menuRepository: MenuRepository,
     private val specification: MenuSpecification,
-    private val validationUtil: ValidationUtil
+    private val validationUtil: ValidationUtil,
+    private val categoryService: CategoryService,
 
 ): MenuService {
 
@@ -36,12 +37,14 @@ class MenuServiceImpl(
     override fun save(request: MenuRequest, image: MultipartFile): MenuResponse {
         validationUtil.validate(request)
         val imageResult = imageService.save(image)
+        val category = categoryService.getById(request.categoryId)
 
         val menu = menuRepository.saveAndFlush(
             Menu(
                 name = request.name,
                 price = request.price,
-                image = imageResult
+                image = imageResult,
+                category = category,
             )
         )
         return createMenuResponse(menu)
@@ -50,11 +53,14 @@ class MenuServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun saveBulk(requests: List<MenuRequest>): List<MenuResponse> {
         validationUtil.validateAll(requests)
+
         val responses = mutableListOf<MenuResponse>()
         requests.forEach { request ->
+            val category = categoryService.getById(request.categoryId)
             val menu = Menu(
                 name = request.name,
-                price = request.price
+                price = request.price,
+                category = category
             )
             menuRepository.saveAndFlush(menu)
             val response = createMenuResponse(menu)
@@ -140,7 +146,8 @@ class MenuServiceImpl(
             id = menu.id!!,
             name = menu.name,
             price = menu.price,
-            image = imageResponse
+            image = imageResponse,
+            category = menu.category.name
         )
     }
 

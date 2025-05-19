@@ -32,7 +32,7 @@ class SecurityConfiguration(
                     .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/auth/confirm/**").permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/menu/*/images/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/menus/*/images/**").permitAll()
                     .anyRequest().authenticated()
             }
             .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
