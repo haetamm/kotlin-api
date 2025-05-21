@@ -15,4 +15,6 @@ interface CustomerService {
     fun delete(id: String): String
     fun getCustomerByNameAndPhone(name: String, phone: String): Customer?
     fun save(name: String, phone: String): Customer
+
+    fun getCustomerByUserId(id: Int): Customer
 }

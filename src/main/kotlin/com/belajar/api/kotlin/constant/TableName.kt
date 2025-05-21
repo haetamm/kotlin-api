@@ -12,4 +12,6 @@ object TableName {
     const val M_BILL_DETAIL = "bill_detail"
     const val M_PAYMENT = "payment"
     const val M_CATEGORY = "category"
+    const val M_CART = "cart"
+    const val M_CART_ITEM = "cart_item"
 }

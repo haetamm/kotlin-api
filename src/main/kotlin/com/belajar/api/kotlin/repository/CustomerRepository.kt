@@ -16,4 +16,6 @@ interface CustomerRepository : JpaRepository<Customer, String>, JpaSpecification
     @Modifying
     @Query("update Customer c set c.deleted = true where c.id = :id")
     fun softDelete(@Param("id") id: String)
+
+    fun findByUserAccountId(userAccountId: Int): Customer?
 }

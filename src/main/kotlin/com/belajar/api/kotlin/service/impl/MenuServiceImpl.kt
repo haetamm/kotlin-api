@@ -151,7 +151,8 @@ class MenuServiceImpl(
         )
     }
 
-    private fun findById(id: String): Menu {
+    @Transactional(rollbackFor = [Exception::class])
+    override fun findById(id: String): Menu {
         return menuRepository.findById(id).orElseThrow {
             throw NotFoundException(StatusMessage.MENU_NOT_FOUND)
         }

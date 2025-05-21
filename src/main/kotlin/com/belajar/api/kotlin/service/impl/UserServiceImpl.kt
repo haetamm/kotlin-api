@@ -128,7 +128,7 @@ class UserServiceImpl(
         return createUserResponse(user, "null")
     }
 
-    private fun findById(id: Int): UserAccount {
+     fun findById(id: Int): UserAccount {
         return userAccountRepository.findById(id).orElseThrow {
             throw NotFoundException(StatusMessage.USER_NOT_FOUND)
         }

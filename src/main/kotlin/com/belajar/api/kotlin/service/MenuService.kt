@@ -16,4 +16,6 @@ interface MenuService {
     fun getAll(request: SearchMenuRequest): Page<MenuResponse>
     fun delete(id: String): String
     fun getMenuById(id: String): Menu
+
+    fun findById(id: String): Menu
 }

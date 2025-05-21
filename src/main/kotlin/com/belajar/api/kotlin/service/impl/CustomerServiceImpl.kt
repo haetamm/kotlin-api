@@ -121,6 +121,12 @@ class CustomerServiceImpl(
         )
     }
 
+    @Transactional(rollbackFor = [Exception::class])
+    override fun getCustomerByUserId(id: Int): Customer {
+        return customerRepository.findByUserAccountId(id)
+            ?: throw NotFoundException(StatusMessage.CUSTOMER_NOT_FOUND)
+    }
+
     private fun createCustomerResponse(customer: Customer): CustomerResponse {
         return CustomerResponse(
             id = customer.id!!,
