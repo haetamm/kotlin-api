@@ -26,7 +26,7 @@ class CartController(
 
     @Operation(summary = "User create/update cart")
     @SecurityRequirement(name = "Authorization")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
     @PostMapping(
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
@@ -36,7 +36,7 @@ class CartController(
 
     @Operation(summary = "User get cart")
     @SecurityRequirement(name = "Authorization")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
     @GetMapping(
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
