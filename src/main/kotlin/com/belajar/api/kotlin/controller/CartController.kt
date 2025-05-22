@@ -4,6 +4,7 @@ import com.belajar.api.kotlin.constant.ApiUrl
 import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.entities.WebResponse
 import com.belajar.api.kotlin.entities.cart.CartRequest
+import com.belajar.api.kotlin.entities.cart.DeleteCartItemRequest
 import com.belajar.api.kotlin.entities.cart_item.CartItemResponse
 import com.belajar.api.kotlin.service.CartService
 import com.belajar.api.kotlin.utils.Utilities
@@ -42,5 +43,14 @@ class CartController(
     )
     fun getAll(): ResponseEntity<WebResponse<List<CartItemResponse>>> =
         utilities.handleRequest({ cartService.getAll() }, HttpStatus.OK, StatusMessage.SUCCESS_RETRIEVE)
+
+    @Operation(summary = "User delete cart item")
+    @SecurityRequirement(name = "Authorization")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
+    @DeleteMapping(
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun deleteByMenuId(@RequestBody request: DeleteCartItemRequest): ResponseEntity<WebResponse<String>> =
+        utilities.handleRequest({ cartService.deleteByMenuId(request) }, HttpStatus.OK, StatusMessage.SUCCESS)
 
 }
