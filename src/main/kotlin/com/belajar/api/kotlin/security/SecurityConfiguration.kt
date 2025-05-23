@@ -10,8 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-
-
+import jakarta.servlet.http.HttpServletResponse
 
 @Configuration
 @EnableWebSecurity
@@ -26,6 +25,11 @@ class SecurityConfiguration(
             .httpBasic { it.disable() }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .exceptionHandling {
+                it.authenticationEntryPoint { _, response, _ ->
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
+                }
+            }
             .authorizeHttpRequests { auth ->
                 auth
                     .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
@@ -38,5 +42,6 @@ class SecurityConfiguration(
             .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .build()
     }
+
 
 }
