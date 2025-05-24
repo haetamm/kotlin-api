@@ -2,19 +2,13 @@ package com.belajar.api.kotlin.entities.user
 
 import com.belajar.api.kotlin.constant.UserRoleEnum
 data class UserResponse <T>(
-
     val id: Int,
-
+    val name: String?,
+    val phone: String?,
+    val address: String?,
     val email: String,
-
     val username: String,
-
     val roles: List<UserRoleEnum?>,
-
     val createdAt: String,
-
     val updatedAt: String,
-
-    val token: T,
-
 )

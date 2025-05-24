@@ -2,10 +2,7 @@ package com.belajar.api.kotlin.service.impl
 
 import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.constant.TransTypeEnum
-import com.belajar.api.kotlin.entities.bill.BillRequest
-import com.belajar.api.kotlin.entities.bill.BillResponse
-import com.belajar.api.kotlin.entities.bill.SearchBillRequest
-import com.belajar.api.kotlin.entities.bill.UpdateBillRequest
+import com.belajar.api.kotlin.entities.bill.*
 import com.belajar.api.kotlin.entities.bill_detail.BillDetailResponse
 import com.belajar.api.kotlin.entities.payment.PaymentResponse
 import com.belajar.api.kotlin.exception.NotFoundException
@@ -21,6 +18,7 @@ import com.belajar.api.kotlin.validation.ValidationUtil
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -40,13 +38,13 @@ class BillServiceImpl(
 ): BillService {
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun save(request: BillRequest): BillResponse {
+    override fun createDineInBill(request: DineInBillRequest): BillResponse {
         validationUtil.validate(request)
 
         val customer: Customer = customerService.getCustomerByNameAndPhone(request.customerName, request.customerPhone)
             ?: customerService.save(request.customerName, request.customerPhone)
 
-        val transType = transTypeService.getById(request.transType)
+        val transType = transTypeService.getById(TransTypeEnum.DI.toString())
 
         val table = tableService.getByName(request.tableName)
 
@@ -63,13 +61,56 @@ class BillServiceImpl(
 
         val billDetails = request.billRequest.map { billDetailRequest ->
             validationUtil.validate(billDetailRequest)
+            val menu = menuService.findById(billDetailRequest.menuId)
             BillDetail(
                 bill = bill,
-                menu = menuService.getMenuById(billDetailRequest.menuId),
+                menu = menu,
                 qty = billDetailRequest.qty,
-                price = billDetailRequest.price
+                price = menu.price
             )
         }
+        billDetailRepository.saveAll(billDetails)
+        bill.billDetails = billDetails
+
+        val payment = paymentService.createPayment(bill)
+        bill.payment = payment
+        billRepository.saveAndFlush(bill)
+
+        return createBillResponse(bill)
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
+    override fun createDeliverBill(request: DeliveryBillRequest): BillResponse {
+        validationUtil.validate(request)
+        val userId = SecurityContextHolder.getContext().authentication.name
+        val customer = customerService.getCustomerByUserId(userId.toInt())
+
+        val transType = transTypeService.getById(TransTypeEnum.D.toString())
+
+        val bill = Bill(
+            recipientName = request.recipientName,
+            phone = request.phone,
+            deliveryAddress = request.deliveryAddress,
+            customer = customer,
+            transDate = Date.from(Instant.now()),
+            transType = TransType(
+                id = TransTypeEnum.valueOf(transType.id),
+                description = transType.description
+            )
+        )
+        billRepository.saveAndFlush(bill)
+
+        val billDetails = request.billRequest.map { billDetailRequest ->
+            validationUtil.validate(billDetailRequest)
+            val menu = menuService.findById(billDetailRequest.menuId)
+            BillDetail(
+                bill = bill,
+                menu = menu,
+                qty = billDetailRequest.qty,
+                price = menu.price
+            )
+        }
+
         billDetailRepository.saveAll(billDetails)
         bill.billDetails = billDetails
 
@@ -120,11 +161,14 @@ class BillServiceImpl(
     private fun createBillResponse(bill: Bill): BillResponse {
         return BillResponse(
             id = bill.id!!,
+            recipientName = bill.recipientName,
+            phone = bill.phone,
+            deliveryAddress = bill.deliveryAddress,
             transDate = bill.transDate.toString(),
             customerId = bill.customer.id!!,
             customerName = bill.customer.name,
-            tableName = bill.table.name,
-            transType = bill.transType.id.toString(),
+            tableName = bill.table?.name,
+            transType = bill.transType.description,
             billDetails = bill.billDetails!!.map { billDetail ->
                 BillDetailResponse(
                     id = billDetail.id!!,

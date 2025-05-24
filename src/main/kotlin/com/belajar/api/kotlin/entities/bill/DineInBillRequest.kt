@@ -6,7 +6,7 @@ import com.belajar.api.kotlin.entities.bill_detail.BillDetailRequest
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 
-data class BillRequest(
+data class DineInBillRequest(
     @field:NotBlank
     var customerName: String,
 
@@ -15,10 +15,6 @@ data class BillRequest(
     @field:NotBlank
     @field:ValidTableName
     var tableName: String,
-
-    @field:NotBlank
-    @field:ValidTransTypeEnum
-    var transType: String,
 
     @NotEmpty(message = "billRequest cannot be empty")
     var billRequest: List<BillDetailRequest>

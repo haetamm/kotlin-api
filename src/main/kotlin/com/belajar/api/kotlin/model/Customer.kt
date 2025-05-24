@@ -28,6 +28,9 @@ data class Customer (
     @Column(name = "phone_number")
     var phone: String? = null,
 
+    @Column(name = "address")
+    var address: String? = null,
+
     @Column(name = "deleted", nullable = false)
     var deleted: Boolean = false,
 

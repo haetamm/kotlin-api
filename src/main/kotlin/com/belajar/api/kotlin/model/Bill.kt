@@ -12,6 +12,15 @@ data class Bill(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: String? = null,
 
+    @Column(name = "recipient_name")
+    var recipientName: String? = null,
+
+    @Column(name = "phone_number")
+    var phone: String? = null,
+
+    @Column(name = "delivery_address")
+    var deliveryAddress : String? = null,
+
     @Column(name = "trans_date", nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
     var transDate: Date,
@@ -21,8 +30,8 @@ data class Bill(
     var customer: Customer,
 
     @ManyToOne
-    @JoinColumn(name = "table_id", nullable = false)
-    var table: TableRest,
+    @JoinColumn(name = "table_id")
+    var table: TableRest? = null,
 
     @ManyToOne
     @JoinColumn(name = "trans_type", nullable = false)

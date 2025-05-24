@@ -4,10 +4,7 @@ import com.belajar.api.kotlin.constant.ApiUrl
 import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.entities.PaginationResponse
 import com.belajar.api.kotlin.entities.WebResponse
-import com.belajar.api.kotlin.entities.bill.BillRequest
-import com.belajar.api.kotlin.entities.bill.BillResponse
-import com.belajar.api.kotlin.entities.bill.SearchBillRequest
-import com.belajar.api.kotlin.entities.bill.UpdateBillRequest
+import com.belajar.api.kotlin.entities.bill.*
 import com.belajar.api.kotlin.service.BillService
 import com.belajar.api.kotlin.service.PdfService
 import com.belajar.api.kotlin.service.impl.PdfServiceImpl
@@ -35,15 +32,26 @@ class BillController(
 ) {
     private lateinit var billResponseList: List<BillResponse>
 
-    @Operation(summary = "Super admin, Admin and User create new bill")
+    @Operation(summary = "Super admin, and Admin create new bill (Dine In)")
     @SecurityRequirement(name = "Authorization")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     @PostMapping(
         consumes = [MediaType.APPLICATION_JSON_VALUE],
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    fun save(@RequestBody request: BillRequest): ResponseEntity<WebResponse<BillResponse>> =
-        utilities.handleRequest({ billService.save(request) }, HttpStatus.CREATED, StatusMessage.SUCCESS_CREATE)
+    fun createDineInBill(@RequestBody request: DineInBillRequest): ResponseEntity<WebResponse<BillResponse>> =
+        utilities.handleRequest({ billService.createDineInBill(request) }, HttpStatus.CREATED, StatusMessage.SUCCESS_CREATE)
+
+    @Operation(summary = "User create new bill (Delivery)")
+    @SecurityRequirement(name = "Authorization")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
+    @PostMapping(
+        path = ["/delivery"],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun createDeliveryBill(@RequestBody request: DeliveryBillRequest): ResponseEntity<WebResponse<BillResponse>> =
+        utilities.handleRequest({ billService.createDeliverBill(request) }, HttpStatus.CREATED, StatusMessage.SUCCESS_CREATE)
 
     @Operation(summary = "Super admin and Admin get bill by id")
     @SecurityRequirement(name = "Authorization")

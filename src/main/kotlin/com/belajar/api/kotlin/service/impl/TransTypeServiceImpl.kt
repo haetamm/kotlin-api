@@ -20,8 +20,8 @@ class TransTypeServiceImpl(
     @PostConstruct
     fun initTransType() {
         val transTypes = listOf(
-            TransType(TransTypeEnum.CT, "Cash Transaction"),
-            TransType(TransTypeEnum.ET, "Electronic Transaction")
+            TransType(TransTypeEnum.DI, "Dine In"),
+            TransType(TransTypeEnum.D, "Delivery")
         )
 
         transTypes.forEach { transType ->

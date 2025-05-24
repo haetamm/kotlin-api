@@ -10,10 +10,9 @@ import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.exception.ValidationCustomException
 import com.belajar.api.kotlin.model.UserAccount
 import com.belajar.api.kotlin.repository.UserAccountRepository
-import com.belajar.api.kotlin.service.JwtService
+import com.belajar.api.kotlin.service.CustomerService
 import com.belajar.api.kotlin.service.UserService
 import com.belajar.api.kotlin.validation.ValidationUtil
-import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -25,11 +24,11 @@ import org.springframework.transaction.annotation.Transactional
 class UserServiceImpl(
     private val userAccountRepository: UserAccountRepository,
     val validationUtil: ValidationUtil,
-    val authenticationManager: AuthenticationManager,
-    val jwtService: JwtService,
-    val passwordEncoder: PasswordEncoder
+    val passwordEncoder: PasswordEncoder,
+    val customerService: CustomerService
 ): UserService {
 
+    @Transactional(rollbackFor = [Exception::class])
     override fun getUserById(id: Int): UserAccount {
         return findById(id)
     }
@@ -39,14 +38,14 @@ class UserServiceImpl(
         val user = userAccountRepository.findByUsername(username).orElseThrow {
             throw NotFoundException(StatusMessage.USER_NOT_FOUND)
         }
-        return createUserResponse(user, "null")
+        return createUserResponse(user)
     }
 
     @Transactional(rollbackFor = [Exception::class])
     override fun getUserCurrent(): UserResponse<String> {
         val userId = SecurityContextHolder.getContext().authentication.name
         val user = findById(userId.toInt())
-        return createUserResponse(user, "null")
+        return createUserResponse(user)
     }
 
     @Transactional(rollbackFor = [Exception::class])
@@ -62,13 +61,19 @@ class UserServiceImpl(
         updateUserData(updateUserCurrentRequest, user)
         userAccountRepository.save(user)
 
+        val isRegularUser = isRegularUser(user)
+        if (isRegularUser) {
+            val customer = customerService.getCustomerByUserId(user.id!!)
+            customer.name = updateUserCurrentRequest.name!!
+            customer.phone = updateUserCurrentRequest.phone!!
+            customer.address = updateUserCurrentRequest.address!!
+        }
+
         val newAuthentication = UsernamePasswordAuthenticationToken(
             user.username,
             updateUserCurrentRequest.passwordConfirmation
         )
-        SecurityContextHolder.getContext().authentication = authenticationManager.authenticate(newAuthentication)
-        val token = jwtService.generateToken(user)
-        return createUserResponse(user, token)
+        return createUserResponse(user)
     }
 
     @Transactional(rollbackFor = [Exception::class])
@@ -97,7 +102,7 @@ class UserServiceImpl(
         val users = response
             .filter { user ->
                 user.roles.size == 1 && user.roles.any { role -> role.role == UserRoleEnum.ROLE_USER }}
-            .map { createUserResponse(it, "null") }
+            .map { createUserResponse(it) }
         return users
     }
 
@@ -107,7 +112,7 @@ class UserServiceImpl(
         val users = response
             .filter { user ->
                 user.roles.size == 2 && user.roles.any { role -> role.role == UserRoleEnum.ROLE_ADMIN }}
-            .map { createUserResponse(it, "null") }
+            .map { createUserResponse(it) }
         return users
     }
 
@@ -125,7 +130,7 @@ class UserServiceImpl(
         user.updatePassword(passwordEncoder.encode(request.password))
 
         userAccountRepository.save(user)
-        return createUserResponse(user, "null")
+        return createUserResponse(user)
     }
 
      fun findById(id: Int): UserAccount {
@@ -157,17 +162,32 @@ class UserServiceImpl(
         }
     }
 
-    private fun createUserResponse(user: UserAccount, token: String): UserResponse<String> {
-        val roleNames = user.roles.map { it.role }
+    private fun isRegularUser(user: UserAccount): Boolean {
+        val roleNames = user.roles.mapNotNull { it.role }
+        return roleNames.size == 1 && roleNames.contains(UserRoleEnum.ROLE_USER)
+    }
+
+    private fun createUserResponse(user: UserAccount): UserResponse<String> {
+
+        val isRegularUser = isRegularUser(user)
+
+        // Hanya ambil customer jika role-nya hanya ROLE_USER
+        val customer = if (isRegularUser) {
+            customerService.getCustomerByUserId(user.id!!)
+        } else null
+
         return UserResponse(
             id = user.id!!,
+            name = customer?.name,
+            phone = customer?.phone,
+            address = customer?.address,
             email = user.email,
             username = user.username,
-            roles = roleNames,
+            roles = user.roles.mapNotNull { it.role },
             createdAt = user.createdAt.toString(),
             updatedAt = user.updatedAt.toString(),
-            token = token
         )
     }
+
 
 }
