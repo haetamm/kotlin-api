@@ -2,6 +2,7 @@ package com.belajar.api.kotlin.controller
 
 import com.belajar.api.kotlin.constant.ApiUrl
 import com.belajar.api.kotlin.constant.StatusMessage
+import com.belajar.api.kotlin.constant.TransTypeEnum
 import com.belajar.api.kotlin.entities.PaginationResponse
 import com.belajar.api.kotlin.entities.WebResponse
 import com.belajar.api.kotlin.entities.bill.*
@@ -70,27 +71,28 @@ class BillController(
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     fun getAll(
-        @RequestParam(name = "daily", required = false) @JsonFormat(pattern = "yyyy-MM-dd") daily: String,
-        @RequestParam(name = "weekStart", required = false) @JsonFormat(pattern = "yyyy-MM-dd") weeklyStart: String,
-        @RequestParam(name = "weekEnd", required = false) @JsonFormat(pattern = "yyyy-MM-dd") weeklyEnd: String,
-        @RequestParam(name = "monthly", required = false) @JsonFormat(pattern = "yyyy-MM") monthly: String,
+        @RequestParam(name = "from", required = false) @JsonFormat(pattern = "yyyy-MM-dd") from: String?,
+        @RequestParam(name = "to", required = false) @JsonFormat(pattern = "yyyy-MM-dd") to: String?,
+        @RequestParam(name = "customerName", required = false) customerName: String?,
+        @RequestParam(name = "transType", required = false) transType: TransTypeEnum?,
+        @RequestParam(name = "transactionStatus", required = false) transactionStatus: String?,
         @RequestParam(name = "direction", defaultValue = "asc") direction: String,
         @RequestParam(name = "sortBy", defaultValue = "transDate") sortBy: String,
         @RequestParam(name = "page", defaultValue = "1") page: Int,
         @RequestParam(name = "size", defaultValue = "10") size: Int,
     ): ResponseEntity<WebResponse<List<BillResponse>>> {
         val request = SearchBillRequest(
-            daily,
-            weeklyStart,
-            weeklyEnd,
-            monthly,
-            direction,
-            sortBy,
-            page,
-            size,
+            from = from,
+            to = to,
+            customerName = customerName,
+            transType = transType,
+            transactionStatus = transactionStatus,
+            direction = direction,
+            sortBy = sortBy,
+            page = page,
+            size = size
         )
         val billResponse = billService.getAll(request)
-        billResponseList = billResponse.content
         val paginationResponse = PaginationResponse(
             totalPages = billResponse.totalPages,
             totalElement = billResponse.totalElements,
