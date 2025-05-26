@@ -1,5 +1,6 @@
 package com.belajar.api.kotlin.service.impl
 
+import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.entities.cart.CartRequest
 import com.belajar.api.kotlin.entities.cart.DeleteCartItemRequest
 import com.belajar.api.kotlin.entities.cart_item.CartItemResponse
@@ -28,12 +29,9 @@ class CartServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun save(request: CartRequest): List<CartItemResponse> {
         validationUtil.validate(request)
-
-        val userId = SecurityContextHolder.getContext().authentication.name
+        val userId = getUserId()
         val customer = customerService.getCustomerByUserId(userId.toInt())
-
-        val cart = cartRepository.findByCustomerId(customer.id!!)
-            .firstOrNull() ?: cartRepository.save(Cart(customer = customer))
+        val cart = findByCustomerId(customer.id.toString())
 
         val cartItems = request.menuRequest.map { itemRequest ->
             val menu = menuService.findById(itemRequest.menuId)
@@ -48,7 +46,7 @@ class CartServiceImpl(
                 existingItem
             } else {
                 if (itemRequest.qty <= 0) {
-                    throw BadRequestException("Quantity must be greater than 0 for new items")
+                    throw BadRequestException("Quantity must be greater than 0")
                 }
                 CartItem(
                     cart = cart,
@@ -58,7 +56,6 @@ class CartServiceImpl(
                 )
             }
         }
-
 
         // Simpan semua CartItem
         val savedCartItems = cartItemRepository.saveAll(cartItems)
@@ -82,7 +79,7 @@ class CartServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun getAll(): List<CartItemResponse> {
-        val userId = SecurityContextHolder.getContext().authentication.name
+        val userId = getUserId()
         val customer = customerService.getCustomerByUserId(userId.toInt())
         val cart = cartRepository.findByCustomerId(customer.id!!).firstOrNull()
         return cart?.items?.map { item ->
@@ -100,11 +97,9 @@ class CartServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun deleteByMenuId(request: DeleteCartItemRequest): String {
         validationUtil.validate(request)
-        val userId = SecurityContextHolder.getContext().authentication.name
+        val userId = getUserId()
         val customer = customerService.getCustomerByUserId(userId.toInt())
-
-        val cart = cartRepository.findByCustomerId(customer.id!!)
-            .firstOrNull() ?: throw BadRequestException("Cart not found for customer")
+        val cart = findByCustomerId(customer.id.toString())
 
         val itemsToDelete = request.items.map { it.menuId }
         val itemsToRemove = cart.items?.filter { it.menu.id in itemsToDelete } ?: emptyList()
@@ -124,4 +119,15 @@ class CartServiceImpl(
 
         return "Successfully deleted ${itemsToRemove.size} item's from cart"
     }
+
+    @Transactional(rollbackFor = [Exception::class])
+    override fun findByCustomerId(id: String): Cart {
+        return cartRepository.findByCustomerId(id)
+            .firstOrNull() ?: throw BadRequestException(StatusMessage.CART_NOT_FOUND)
+    }
+
+    private fun getUserId(): String {
+        return SecurityContextHolder.getContext().authentication.name
+    }
+
 }

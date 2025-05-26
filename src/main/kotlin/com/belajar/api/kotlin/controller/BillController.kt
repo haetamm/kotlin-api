@@ -51,7 +51,7 @@ class BillController(
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
     fun createDeliveryBill(@RequestBody request: DeliveryBillRequest): ResponseEntity<WebResponse<BillResponse>> =
-        utilities.handleRequest({ billService.createDeliverBill(request) }, HttpStatus.CREATED, StatusMessage.SUCCESS_CREATE)
+        utilities.handleRequest({ billService.createDeliveryBill(request) }, HttpStatus.CREATED, StatusMessage.SUCCESS_CREATE)
 
     @Operation(summary = "Super admin and Admin get bill by id")
     @SecurityRequirement(name = "Authorization")

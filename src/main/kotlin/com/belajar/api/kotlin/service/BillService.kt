@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page
 
 interface BillService {
     fun createDineInBill(request: DineInBillRequest): BillResponse
-    fun createDeliverBill(request: DeliveryBillRequest): BillResponse
+    fun createDeliveryBill(request: DeliveryBillRequest): BillResponse
     fun getById(id: String): BillResponse
     fun getAll(request: SearchBillRequest): Page<BillResponse>
     fun updateStatusPayment(request: UpdateBillRequest, id: String): String
