@@ -11,6 +11,7 @@ data class SearchBillRequest(
     val to: String? = null,
 
     val customerName: String? = null,
+    val menuName: String? = null,
     val transType: TransTypeEnum? = null,
     val transactionStatus: String? = null,
     val direction: String = "desc",

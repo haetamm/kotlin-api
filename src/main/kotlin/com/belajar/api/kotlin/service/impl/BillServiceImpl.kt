@@ -230,6 +230,7 @@ class BillServiceImpl(
                 BillDetailResponse(
                     id = billDetail.id!!,
                     menuId = billDetail.menu.id!!,
+                    name = billDetail.menu.name,
                     qty = billDetail.qty,
                     price = billDetail.price
                 )

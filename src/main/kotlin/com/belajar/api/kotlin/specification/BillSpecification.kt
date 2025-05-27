@@ -1,10 +1,7 @@
 package com.belajar.api.kotlin.specification
 
 import com.belajar.api.kotlin.entities.bill.SearchBillRequest
-import com.belajar.api.kotlin.model.Bill
-import com.belajar.api.kotlin.model.Customer
-import com.belajar.api.kotlin.model.Payment
-import com.belajar.api.kotlin.model.TransType
+import com.belajar.api.kotlin.model.*
 import com.belajar.api.kotlin.utils.Utilities
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
@@ -36,9 +33,16 @@ class BillSpecification(
             }
 
             // Filter by customer name
-            request.customerName?.let {
+            request.customerName?.takeIf { it.isNotBlank() }?.let {
                 val customerJoin = root.join<Bill, Customer>("customer")
                 predicates.add(criteriaBuilder.like(criteriaBuilder.lower(customerJoin.get("name")), "%${it.lowercase()}%"))
+            }
+
+            // Filter by menu name
+            request.menuName?.takeIf { it.isNotBlank() }?.let {
+                val billDetailJoin = root.join<Bill, BillDetail>("billDetails")
+                val menuJoin = billDetailJoin.join<BillDetail, Menu>("menu")
+                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(menuJoin.get("name")), "%${it.lowercase()}%"))
             }
 
             // Filter by transType
