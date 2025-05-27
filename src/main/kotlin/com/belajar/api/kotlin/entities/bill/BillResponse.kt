@@ -14,5 +14,6 @@ data class BillResponse(
     var tableName: String?,
     var transType: String,
     var billDetails: List<BillDetailResponse>,
-    var payment: PaymentResponse
+    var payment: PaymentResponse,
+    var totalPayment: Long
 )

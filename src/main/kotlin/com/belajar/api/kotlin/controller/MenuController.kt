@@ -13,6 +13,7 @@ import com.belajar.api.kotlin.utils.Utilities
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springdoc.core.annotations.ParameterObject
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -78,25 +79,8 @@ class MenuController(
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'USER')")
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
     fun getAll(
-        @RequestParam(name = "category", required = false, defaultValue = "all") category: String,
-        @RequestParam(name = "name", required = false, defaultValue = "all" ) name: String,
-        @RequestParam(name = "minPrice", required = false, defaultValue = "0") minPrice: Long,
-        @RequestParam(name = "maxPrice", required = false, defaultValue = "100000000") maxPrice: Long,
-        @RequestParam(name = "direction", defaultValue = "asc") direction: String,
-        @RequestParam(name = "sortBy", defaultValue = "name") sortBy: String,
-        @RequestParam(name = "page", defaultValue = "1") page: Int,
-        @RequestParam(name = "size", defaultValue = "10") size: Int
+        @ParameterObject @ModelAttribute request: SearchMenuRequest
     ): ResponseEntity<WebResponse<List<MenuResponse>>> {
-        val request = SearchMenuRequest(
-            category,
-            name,
-            minPrice,
-            maxPrice,
-            direction,
-            sortBy,
-            page,
-            size,
-        )
         val menuResponse = menuService.getAll(request)
         val paginationResponse = PaginationResponse(
             totalPages = menuResponse.totalPages,

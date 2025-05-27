@@ -21,6 +21,7 @@ import com.belajar.api.kotlin.validation.ValidationUtil
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -88,7 +89,7 @@ class BillServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun createDeliveryBill(request: DeliveryBillRequest): BillResponse {
         validationUtil.validate(request)
-        val userId = SecurityContextHolder.getContext().authentication.name
+        val userId = getUserId()
         val customer = customerService.getCustomerByUserId(userId.toInt())
 
         val transType = transTypeService.getById(TransTypeEnum.D.toString())
@@ -149,7 +150,6 @@ class BillServiceImpl(
         return createBillResponse(bill)
     }
 
-
     @Transactional(rollbackFor = [Exception::class])
     override fun getById(id: String): BillResponse {
         val bill = findById(id)
@@ -171,6 +171,30 @@ class BillServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
+    override fun getByCurrentUser(request: SearchBillRequest): Page<BillResponse> {
+        val userId = getUserId()
+
+        // Filter berdasarkan userId di Customer.userAccount.id
+        val userSpec = Specification<Bill> { root, _, cb ->
+            cb.equal(root.get<Any>("customer").get<Any>("userAccount").get<String>("id"), userId)
+        }
+
+        // Ambil spesifikasi filter lainnya dari request
+        val requestSpec = specification.specification(request)
+
+        // Gabungkan semua spesifikasi
+        val billSpecification = Specification.where(userSpec).and(requestSpec)
+
+        val sort = Sort.by(Sort.Direction.fromString(request.direction), request.sortBy)
+        val page = if (request.page <= 0) 1 else request.page
+        val pageable = PageRequest.of(page - 1, request.size, sort)
+
+        val bills = billRepository.findAll(billSpecification, pageable)
+        return bills.map { bill -> createBillResponse(bill) }
+    }
+
+
+    @Transactional(rollbackFor = [Exception::class])
     override fun updateStatusPayment(request: UpdateBillRequest, id: String): String {
         val bill = findById(id)
         val payment = bill.payment
@@ -186,7 +210,12 @@ class BillServiceImpl(
         }
     }
 
+    private fun getUserId(): String {
+        return SecurityContextHolder.getContext().authentication.name
+    }
+
     private fun createBillResponse(bill: Bill): BillResponse {
+        val totalPayment = bill.billDetails?.sumOf { it.qty * it.price } ?: 0L
         return BillResponse(
             id = bill.id!!,
             recipientName = bill.recipientName,
@@ -210,7 +239,8 @@ class BillServiceImpl(
                 token = bill.payment!!.token,
                 transactionStatus = bill.payment!!.transactionStatus,
                 redirectUrl = bill.payment!!.redirectUrl
-            )
+            ),
+            totalPayment
         )
     }
 

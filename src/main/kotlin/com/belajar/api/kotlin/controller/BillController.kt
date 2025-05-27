@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletResponse
+import org.springdoc.core.annotations.ParameterObject
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -70,29 +71,34 @@ class BillController(
     @GetMapping(
         produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    fun getAll(
-        @RequestParam(name = "from", required = false) @JsonFormat(pattern = "yyyy-MM-dd") from: String?,
-        @RequestParam(name = "to", required = false) @JsonFormat(pattern = "yyyy-MM-dd") to: String?,
-        @RequestParam(name = "customerName", required = false) customerName: String?,
-        @RequestParam(name = "transType", required = false) transType: TransTypeEnum?,
-        @RequestParam(name = "transactionStatus", required = false) transactionStatus: String?,
-        @RequestParam(name = "direction", defaultValue = "asc") direction: String,
-        @RequestParam(name = "sortBy", defaultValue = "transDate") sortBy: String,
-        @RequestParam(name = "page", defaultValue = "1") page: Int,
-        @RequestParam(name = "size", defaultValue = "10") size: Int,
-    ): ResponseEntity<WebResponse<List<BillResponse>>> {
-        val request = SearchBillRequest(
-            from = from,
-            to = to,
-            customerName = customerName,
-            transType = transType,
-            transactionStatus = transactionStatus,
-            direction = direction,
-            sortBy = sortBy,
-            page = page,
-            size = size
-        )
+    fun getAll(@ParameterObject @ModelAttribute request: SearchBillRequest): ResponseEntity<WebResponse<List<BillResponse>>> {
         val billResponse = billService.getAll(request)
+        val paginationResponse = PaginationResponse(
+            totalPages = billResponse.totalPages,
+            totalElement = billResponse.totalElements,
+            page = billResponse.number + 1,
+            size = billResponse.size,
+            hasNext = billResponse.hasNext(),
+            hasPrevious = billResponse.hasPrevious()
+        )
+        val response = WebResponse(
+            code = HttpStatus.OK.value(),
+            status = StatusMessage.SUCCESS_RETRIEVE_LIST,
+            data = billResponse.content,
+            paginationResponse = paginationResponse
+        )
+        return ResponseEntity.status(HttpStatus.OK).body(response)
+    }
+
+    @Operation(summary = "Current User get all bill")
+    @SecurityRequirement(name = "Authorization")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
+    @GetMapping(
+        path = ["/me"],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun getByCurrentUser(@ParameterObject @ModelAttribute request: SearchBillRequest): ResponseEntity<WebResponse<List<BillResponse>>> {
+        val billResponse = billService.getByCurrentUser(request)
         val paginationResponse = PaginationResponse(
             totalPages = billResponse.totalPages,
             totalElement = billResponse.totalElements,
