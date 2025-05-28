@@ -22,14 +22,24 @@ class BillSpecification(
             // Filter by transDate range (from and to)
             request.from?.let {
                 val fromDate = utilities.parseDate(it, "yyyy-MM-dd")
-                val start = Timestamp(fromDate.time)
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("transDate"), start))
+                val start = java.sql.Date(fromDate.time)
+                predicates.add(
+                    criteriaBuilder.greaterThanOrEqualTo(
+                        criteriaBuilder.function("DATE", java.sql.Date::class.java, root.get<Timestamp>("transDate")),
+                        criteriaBuilder.literal(start)
+                    )
+                )
             }
 
             request.to?.let {
                 val toDate = utilities.parseDate(it, "yyyy-MM-dd")
-                val end = Timestamp(toDate.time).apply { nanos = 999999999 } // Set to end of day
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("transDate"), end))
+                val end = java.sql.Date(toDate.time)
+                predicates.add(
+                    criteriaBuilder.lessThanOrEqualTo(
+                        criteriaBuilder.function("DATE", java.sql.Date::class.java, root.get<Timestamp>("transDate")),
+                        criteriaBuilder.literal(end)
+                    )
+                )
             }
 
             // Filter by customer name
@@ -51,7 +61,7 @@ class BillSpecification(
             }
 
             // Filter by transactionStatus
-            request.transactionStatus?.let {
+            request.transactionStatus?.takeIf{ it.isNotBlank() }?.let {
                 val paymentJoin = root.join<Bill, Payment>("payment")
                 predicates.add(criteriaBuilder.equal(paymentJoin.get<String>("transactionStatus"), it))
             }
