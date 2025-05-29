@@ -6,6 +6,7 @@ import com.belajar.api.kotlin.entities.bill.*
 import com.belajar.api.kotlin.entities.bill_detail.BillDetailResponse
 import com.belajar.api.kotlin.entities.payment.PaymentResponse
 import com.belajar.api.kotlin.exception.BadRequestException
+import com.belajar.api.kotlin.exception.ForbiddenException
 import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.model.Bill
 import com.belajar.api.kotlin.model.BillDetail
@@ -153,6 +154,17 @@ class BillServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun getById(id: String): BillResponse {
         val bill = findById(id)
+        return createBillResponse(bill)
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
+    override fun currentUserGetById(id: String): BillResponse {
+        val bill = findById(id)
+        val userId = getUserId()
+
+        if (bill.customer.userAccount?.id.toString() != userId) {
+            throw ForbiddenException(StatusMessage.ACCESS_DENIED)
+        }
         return createBillResponse(bill)
     }
 

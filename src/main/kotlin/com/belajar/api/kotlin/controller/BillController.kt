@@ -65,6 +65,16 @@ class BillController(
     fun getById(@PathVariable id: String): ResponseEntity<WebResponse<BillResponse>> =
         utilities.handleRequest({ billService.getById(id) }, HttpStatus.OK, StatusMessage.SUCCESS_RETRIEVE)
 
+    @Operation(summary = "Current User get bill by id")
+    @SecurityRequirement(name = "Authorization")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
+    @GetMapping(
+        path = ["/{id}/me"],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun currentUserGetById(@PathVariable id: String): ResponseEntity<WebResponse<BillResponse>> =
+        utilities.handleRequest({ billService.currentUserGetById(id) }, HttpStatus.OK, StatusMessage.SUCCESS_RETRIEVE)
+
     @Operation(summary = "Super admin and Admin get all bill")
     @SecurityRequirement(name = "Authorization")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
