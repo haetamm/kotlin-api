@@ -231,7 +231,7 @@ class BillServiceImpl(
         return BillResponse(
             id = bill.id!!,
             recipientName = bill.recipientName,
-            phone = bill.phone,
+            phone = bill.phone ?: bill.customer.phone,
             deliveryAddress = bill.deliveryAddress,
             transDate = bill.transDate.toString(),
             customerId = bill.customer.id!!,
