@@ -24,6 +24,7 @@ class TableServiceImpl(
         val table = tableRepository.saveAndFlush(
             TableRest(
                 name = request.name,
+                isTaken = request.isTaken
             )
         )
         return createTableResponse(table)
@@ -48,6 +49,7 @@ class TableServiceImpl(
         validationUtil.validate(request)
         val table = getTableById(id)
         table.name = request.name
+        table.isTaken = request.isTaken
         tableRepository.saveAndFlush(table)
         return createTableResponse(table)
     }
@@ -71,6 +73,7 @@ class TableServiceImpl(
         return TableResponse(
             id = table.id!!,
             name = table.name,
+            isTaken = table.isTaken
         )
     }
 

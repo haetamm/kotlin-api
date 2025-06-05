@@ -18,6 +18,9 @@ data class TableRest(
     @Column(name = "name", nullable = false)
     var name: String,
 
+    @Column(name = "is_taken", nullable = false)
+    var isTaken: Boolean = false,
+
     @Column(name = "deleted", nullable = false)
     var deleted: Boolean = false,
 )
