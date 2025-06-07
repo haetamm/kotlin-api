@@ -90,11 +90,16 @@ class ImageServiceImpl(
         }
     }
 
-
     private fun validateAndSaveImage(image: MultipartFile): String {
-        val allowedContentTypes = listOf("image/jpg", "image/jpeg", "image/png", "image/svg+xml")
+        val allowedContentTypes = listOf("image/jpg", "image/jpeg", "image/png")
+        val maxSize = 307_200
+
         if (!allowedContentTypes.contains(image.contentType)) {
-            throw BadRequestException("invalid image type")
+            throw BadRequestException("Invalid image type")
+        }
+
+        if (image.size > maxSize) {
+            throw BadRequestException("Image size exceeds limit of 300 KB")
         }
 
         val fileName = "${System.currentTimeMillis()}${image.originalFilename}"
@@ -103,4 +108,5 @@ class ImageServiceImpl(
 
         return fileName
     }
+
 }
