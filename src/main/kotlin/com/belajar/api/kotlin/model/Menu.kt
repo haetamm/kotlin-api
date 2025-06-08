@@ -14,7 +14,7 @@ data class Menu(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: String? = null,
 
-    @Column(name = "name", nullable = false, unique = true)
+    @Column(name = "name", nullable = false)
     var name: String,
 
     @Column(name = "price", nullable = false)

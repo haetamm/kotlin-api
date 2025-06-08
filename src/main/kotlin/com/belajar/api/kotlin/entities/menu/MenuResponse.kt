@@ -8,4 +8,5 @@ data class MenuResponse(
     var price: Long,
     var image: ImageResponse?,
     var category: String,
+    var categoryId: String?
 )

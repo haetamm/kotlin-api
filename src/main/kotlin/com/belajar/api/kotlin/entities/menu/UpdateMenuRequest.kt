@@ -9,4 +9,7 @@ data class UpdateMenuRequest(
 
     @field:NotNull
     var price: Long,
+
+    @field:NotBlank
+    var categoryId: String
 )

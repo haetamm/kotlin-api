@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull
 
 data class MenuRequest(
     @field:NotBlank
-    @field:UniqueNameMenu
     var name: String,
 
     @field:NotNull

@@ -78,6 +78,7 @@ class MenuServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun updateById(request: UpdateMenuRequest, updateImage: MultipartFile?, id: String): MenuResponse {
         validationUtil.validate(request)
+        val category = categoryService.getById(request.categoryId)
 
         val menu = findById(id)
         val image = menu.image
@@ -92,8 +93,9 @@ class MenuServiceImpl(
             }
         }
 
-        updateNameMenuIfChange(request.name, menu)
+        menu.name = request.name
         menu.price = request.price
+        menu.category = category
 
         return  createMenuResponse(menu)
     }
@@ -125,15 +127,6 @@ class MenuServiceImpl(
         return findById(id)
     }
 
-    private fun updateNameMenuIfChange(newName: String, menu: Menu) {
-        if (newName != menu.name) {
-            if (menuRepository.existsByName(newName)) {
-                throw ValidationCustomException(StatusMessage.NAME_MENU_BEEN_TAKEN, "name")
-            }
-            menu.name = newName
-        }
-    }
-
     private fun createMenuResponse(menu: Menu): MenuResponse {
         val imageResponse = menu.image?.let {
             ImageResponse(
@@ -147,7 +140,8 @@ class MenuServiceImpl(
             name = menu.name,
             price = menu.price,
             image = imageResponse,
-            category = menu.category.name
+            category = menu.category.name,
+            categoryId = menu.category.id
         )
     }
 
