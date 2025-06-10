@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
-data class UpdateUserCurrentRequest (
+data class UpdateCurrentUserRequest (
 
     @field:NotBlank
     @field:Pattern(regexp = "^[a-zA-Z ]+\$", message = "must contain only alphabet characters and spaces")
@@ -21,15 +21,7 @@ data class UpdateUserCurrentRequest (
     @field:Size(max = 225)
     val address: String?,
 
-    @field:EmailIfNotBlank
-    val email: String?,
-
     @field:UsernameIfNotBlank
     val username: String?,
-
-    @field:NotBlank
-    @field:Size(min = 4, max = 8)
-    @field:Pattern(regexp = "^[a-zA-Z0-9]+\$", message = "must contain only alphanumeric characters")
-    val passwordConfirmation: String?
 
 )

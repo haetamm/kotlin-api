@@ -2,9 +2,7 @@ package com.belajar.api.kotlin.service.impl
 
 import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.constant.UserRoleEnum
-import com.belajar.api.kotlin.entities.user.RegisterRequest
-import com.belajar.api.kotlin.entities.user.UpdateUserCurrentRequest
-import com.belajar.api.kotlin.entities.user.UserResponse
+import com.belajar.api.kotlin.entities.user.*
 import com.belajar.api.kotlin.exception.ForbiddenException
 import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.exception.ValidationCustomException
@@ -13,11 +11,15 @@ import com.belajar.api.kotlin.repository.UserAccountRepository
 import com.belajar.api.kotlin.service.CustomerService
 import com.belajar.api.kotlin.service.UserService
 import com.belajar.api.kotlin.validation.ValidationUtil
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.mail.SimpleMailMessage
+import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
+import java.util.*
+
 
 
 @Service
@@ -25,7 +27,8 @@ class UserServiceImpl(
     private val userAccountRepository: UserAccountRepository,
     val validationUtil: ValidationUtil,
     val passwordEncoder: PasswordEncoder,
-    val customerService: CustomerService
+    val customerService: CustomerService,
+    val mailSender: JavaMailSender,
 ): UserService {
 
     @Transactional(rollbackFor = [Exception::class])
@@ -42,38 +45,81 @@ class UserServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun getUserCurrent(): UserResponse<String> {
-        val userId = SecurityContextHolder.getContext().authentication.name
+    override fun getCurrentUser(): UserResponse<String> {
+        val userId = getUserId()
         val user = findById(userId.toInt())
         return createUserResponse(user)
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun updateUserCurrent(updateUserCurrentRequest: UpdateUserCurrentRequest): UserResponse<String> {
-        validationUtil.validate(updateUserCurrentRequest)
-        val userId = SecurityContextHolder.getContext().authentication.name
+    override fun updateCurrentUser(updateCurrentUserRequest: UpdateCurrentUserRequest): UserResponse<String> {
+        validationUtil.validate(updateCurrentUserRequest)
+        val userId = this.getUserId()
         val user = findById(userId.toInt())
 
-        if (!user.comparePassword(updateUserCurrentRequest.passwordConfirmation!!)) {
-            throw ValidationCustomException("Password incorrect", "password")
-        }
-
-        updateUserData(updateUserCurrentRequest, user)
+        updateUserData(updateCurrentUserRequest, user)
         userAccountRepository.save(user)
 
         val isRegularUser = isRegularUser(user)
         if (isRegularUser) {
             val customer = customerService.getCustomerByUserId(user.id!!)
-            customer.name = updateUserCurrentRequest.name!!
-            customer.phone = updateUserCurrentRequest.phone!!
-            customer.address = updateUserCurrentRequest.address!!
+            customer.name = updateCurrentUserRequest.name!!
+            customer.phone = updateCurrentUserRequest.phone!!
+            customer.address = updateCurrentUserRequest.address!!
         }
 
-        val newAuthentication = UsernamePasswordAuthenticationToken(
-            user.username,
-            updateUserCurrentRequest.passwordConfirmation
-        )
         return createUserResponse(user)
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
+    override fun updateCurrentUserEmail(updateCurrentUserEmailRequest: UpdateCurrentUserEmailRequest): String {
+        validationUtil.validate(updateCurrentUserEmailRequest)
+        val userId = this.getUserId()
+        val user = findById(userId.toInt())
+
+        if (!user.comparePassword(updateCurrentUserEmailRequest.passwordConfirmation)) {
+            throw ValidationCustomException("Password incorrect", "password")
+        }
+
+        val random = Random()
+        val confirmationEmailToken = String.format("%06d", random.nextInt(999999)) // token 6 digit (000000-999999)
+        val expiryTime = LocalDateTime.now().plusMinutes(10) // 10 menit token
+
+        user.pendingEmail = updateCurrentUserEmailRequest.newEmail
+        user.confirmationEmailToken = confirmationEmailToken
+        user.confirmationTokenExpiry = expiryTime
+        userAccountRepository.save(user)
+
+        val subject = "Email Change Confirmation"
+        val text = """
+            Hello,
+            
+            Please use the following 6-digit token to confirm your email change:
+            Token: $confirmationEmailToken
+            
+            This token will expire at ${expiryTime.toString()}.
+            If you did not request this change, please ignore this email.
+            
+            Thank you,
+            Application Team
+        """.trimIndent()
+        sendEmail(user, subject, text)
+        return "Confirmation token sent to ${updateCurrentUserEmailRequest.newEmail}. Please enter the token in the application."
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
+    override fun updateCurrentUserPassword(updateCurrentUserPasswordRequest: UpdateCurrentUserPasswordRequest): String {
+        validationUtil.validate(updateCurrentUserPasswordRequest)
+        val userId = this.getUserId()
+        val user = findById(userId.toInt())
+
+        if (!user.comparePassword(updateCurrentUserPasswordRequest.passwordConfirmation)) {
+            throw ValidationCustomException("Password incorrect", "password")
+        }
+
+        user.updatePassword(passwordEncoder.encode(updateCurrentUserPasswordRequest.password))
+        userAccountRepository.save(user)
+        return "Password successfully updated";
     }
 
     @Transactional(rollbackFor = [Exception::class])
@@ -139,9 +185,12 @@ class UserServiceImpl(
         }
     }
 
-    private fun updateUserData(updateUserCurrentRequest: UpdateUserCurrentRequest, user: UserAccount) {
-        updateUsernameIfChange(updateUserCurrentRequest.username!!, user)
-        updateEmailIfChange(updateUserCurrentRequest.email!!, user)
+    private fun getUserId():String {
+        return SecurityContextHolder.getContext().authentication.name
+    }
+
+    private fun updateUserData(updateCurrentUserRequest: UpdateCurrentUserRequest, user: UserAccount) {
+        updateUsernameIfChange(updateCurrentUserRequest.username!!, user)
     }
 
     private fun updateUsernameIfChange(newUsername: String, user: UserAccount) {
@@ -189,5 +238,11 @@ class UserServiceImpl(
         )
     }
 
-
+    private fun sendEmail(user: UserAccount, subject: String, text: String) {
+        val message = SimpleMailMessage()
+        message.setTo(user.pendingEmail)
+        message.subject = subject
+        message.text = text
+        mailSender.send(message)
+    }
 }

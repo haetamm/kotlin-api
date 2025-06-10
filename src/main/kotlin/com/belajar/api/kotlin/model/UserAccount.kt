@@ -33,8 +33,17 @@ data class UserAccount (
     @Column(name  = "confirmed")
     var confirmed: Boolean = false,
 
-    @Column(name = "confirmationToken")
+    @Column(name = "confirmation_token")
     var confirmationToken: String? = null,
+
+    @Column(name = "pending_email")
+    var pendingEmail: String? = null,
+
+    @Column(name = "confirmation_email_token")
+    var confirmationEmailToken: String? = null,
+
+    @Column(name = "confirmation_token_expiry")
+    var confirmationTokenExpiry: LocalDateTime? = null,
 
     @Column(name = "resetPasswordToken")
     var resetPasswordToken: String? = null,

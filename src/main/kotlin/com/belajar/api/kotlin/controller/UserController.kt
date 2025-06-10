@@ -3,9 +3,7 @@ package com.belajar.api.kotlin.controller
 import com.belajar.api.kotlin.constant.ApiUrl
 import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.entities.WebResponse
-import com.belajar.api.kotlin.entities.user.RegisterRequest
-import com.belajar.api.kotlin.entities.user.UpdateUserCurrentRequest
-import com.belajar.api.kotlin.entities.user.UserResponse
+import com.belajar.api.kotlin.entities.user.*
 import com.belajar.api.kotlin.service.UserService
 import com.belajar.api.kotlin.utils.Utilities
 import io.swagger.v3.oas.annotations.Operation
@@ -36,14 +34,36 @@ class UserController(
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'USER') or authenticated")
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
     fun getUserCurrent (): ResponseEntity<WebResponse<UserResponse<String>>> =
-        utilities.handleRequest ({ userService.getUserCurrent() }, HttpStatus.OK, StatusMessage.SUCCESS_RETRIEVE)
+        utilities.handleRequest ({ userService.getCurrentUser() }, HttpStatus.OK, StatusMessage.SUCCESS_RETRIEVE)
 
     @Operation(summary = "Update User Current")
     @SecurityRequirement(name = "Authorization")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER') and !hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
     @PutMapping(consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun updateUserCurrent (@RequestBody request: UpdateUserCurrentRequest): ResponseEntity<WebResponse<UserResponse<String>>> =
-        utilities.handleRequest ({ userService.updateUserCurrent(request) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
+    fun updateCurrentUser (@RequestBody request: UpdateCurrentUserRequest): ResponseEntity<WebResponse<UserResponse<String>>> =
+        utilities.handleRequest ({ userService.updateCurrentUser(request) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
+
+    @Operation(summary = "Update  Current User Password")
+    @SecurityRequirement(name = "Authorization")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
+    @PutMapping(
+        path = ["/credential/1"],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun updateCurrentUserPassword (@RequestBody request: UpdateCurrentUserPasswordRequest): ResponseEntity<WebResponse<String>> =
+        utilities.handleRequest ({ userService.updateCurrentUserPassword(request) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
+
+    @Operation(summary = "Update Current User Email")
+    @SecurityRequirement(name = "Authorization")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
+    @PutMapping(
+        path = ["/credential/2"],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun updateCurrentUserEmail (@RequestBody updateCurrentUserEmailRequest: UpdateCurrentUserEmailRequest): ResponseEntity<WebResponse<String>> =
+        utilities.handleRequest ({ userService.updateCurrentUserEmail(updateCurrentUserEmailRequest) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
 
     @Operation(summary = "Super admin and Admin get User by username")
     @SecurityRequirement(name = "Authorization")
