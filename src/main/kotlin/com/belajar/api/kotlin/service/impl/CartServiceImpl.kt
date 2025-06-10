@@ -31,8 +31,15 @@ class CartServiceImpl(
         validationUtil.validate(request)
         val userId = getUserId()
         val customer = customerService.getCustomerByUserId(userId.toInt())
-        val cart = findByCustomerId(customer.id.toString())
 
+        // Try to find existing cart, or create a new one if none exists
+        var cart = cartRepository.findByCustomerId(customer.id.toString()).firstOrNull() ?:
+            Cart(
+                customer = customer,
+                items = mutableListOf()
+            )
+
+        // Process cart items
         val cartItems = request.menuRequest.map { itemRequest ->
             val menu = menuService.findById(itemRequest.menuId)
             val existingItem = cart.items?.find { it.menu.id == itemRequest.menuId }
@@ -57,14 +64,21 @@ class CartServiceImpl(
             }
         }
 
-        // Simpan semua CartItem
+        // Save the cart first if it's new (to generate ID)
+        if (cart.id == null) {
+            cart = cartRepository.save(cart)
+            // Update cart reference in new cart items
+            cartItems.forEach { if (it.id == null) it.cart = cart }
+        }
+
+        // Save all CartItem
         val savedCartItems = cartItemRepository.saveAll(cartItems)
 
-        // Update items di Cart dan simpan
+        // Update items in Cart and save
         cart.items = savedCartItems
         cartRepository.save(cart)
 
-        // Konversi CartItem ke CartItemResponse
+        // Convert CartItem to CartItemResponse
         return savedCartItems.map { item ->
             CartItemResponse(
                 id = item.id!!,
