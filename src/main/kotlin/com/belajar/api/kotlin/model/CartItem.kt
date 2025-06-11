@@ -21,7 +21,4 @@ data class CartItem(
     @Column(name = "qty", nullable = false)
     var qty: Int,
 
-    @Column(name = "price", nullable = false)
-    var price: Long
-
 )

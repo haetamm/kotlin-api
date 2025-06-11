@@ -13,12 +13,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 
 @RestController
@@ -53,6 +48,17 @@ class UserController(
     )
     fun updateCurrentUserPassword (@RequestBody request: UpdateCurrentUserPasswordRequest): ResponseEntity<WebResponse<String>> =
         utilities.handleRequest ({ userService.updateCurrentUserPassword(request) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
+
+    @Operation(summary = "Current User Confirm email token")
+    @SecurityRequirement(name = "Authorization")
+    @PreAuthorize("hasRole('USER') && !hasRole('ADMIN') && !hasRole('SUPER_ADMIN')")
+    @PostMapping(
+        path = ["/confirm-email"],
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun emailConfirmation (@RequestBody confirmEmailTokenRequest: ConfirmEmailTokenRequest): ResponseEntity<WebResponse<UserResponse<String>>> =
+        utilities.handleRequest ({ userService.emailConfirmation(confirmEmailTokenRequest) }, HttpStatus.OK, StatusMessage.SUCCESS)
 
     @Operation(summary = "Update Current User Email")
     @SecurityRequirement(name = "Authorization")

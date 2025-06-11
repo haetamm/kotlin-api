@@ -59,7 +59,6 @@ class CartServiceImpl(
                     cart = cart,
                     menu = menu,
                     qty = itemRequest.qty,
-                    price = menu.price
                 )
             }
         }
@@ -86,7 +85,7 @@ class CartServiceImpl(
                 name = item.menu.name,
                 image = item.menu.image?.id,
                 qty = item.qty,
-                price = item.price
+                price = item.menu.price
             )
         }
     }
@@ -103,7 +102,7 @@ class CartServiceImpl(
                 name = item.menu.name,
                 image = item.menu.image?.id,
                 qty = item.qty,
-                price = item.price
+                price = item.menu.price
             )
         } ?: emptyList()
     }

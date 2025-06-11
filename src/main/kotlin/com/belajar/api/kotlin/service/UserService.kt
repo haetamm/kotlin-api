@@ -10,6 +10,7 @@ interface UserService {
     fun updateCurrentUser(updateCurrentUserRequest: UpdateCurrentUserRequest): UserResponse<String>
     fun updateCurrentUserEmail(updateCurrentUserEmailRequest: UpdateCurrentUserEmailRequest): String
     fun updateCurrentUserPassword(updateCurrentUserPasswordRequest: UpdateCurrentUserPasswordRequest): String
+    fun emailConfirmation(confirmEmailTokenRequest: ConfirmEmailTokenRequest): UserResponse<String>
     fun disabledOrEnabledUserById(id: Int): String
     fun getUserAll(): List<UserResponse<String>>
     fun getAdminAll(): List<UserResponse<String>>

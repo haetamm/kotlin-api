@@ -72,6 +72,21 @@ class UserServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
+    override fun updateCurrentUserPassword(updateCurrentUserPasswordRequest: UpdateCurrentUserPasswordRequest): String {
+        validationUtil.validate(updateCurrentUserPasswordRequest)
+        val userId = this.getUserId()
+        val user = findById(userId.toInt())
+
+        if (!user.comparePassword(updateCurrentUserPasswordRequest.passwordConfirmation)) {
+            throw ValidationCustomException("Password incorrect", "password")
+        }
+
+        user.updatePassword(passwordEncoder.encode(updateCurrentUserPasswordRequest.password))
+        userAccountRepository.save(user)
+        return "Password successfully updated";
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
     override fun updateCurrentUserEmail(updateCurrentUserEmailRequest: UpdateCurrentUserEmailRequest): String {
         validationUtil.validate(updateCurrentUserEmailRequest)
         val userId = this.getUserId()
@@ -106,20 +121,33 @@ class UserServiceImpl(
         sendEmail(user, subject, text)
         return "Confirmation token sent to ${updateCurrentUserEmailRequest.newEmail}. Please enter the token in the application."
     }
-
     @Transactional(rollbackFor = [Exception::class])
-    override fun updateCurrentUserPassword(updateCurrentUserPasswordRequest: UpdateCurrentUserPasswordRequest): String {
-        validationUtil.validate(updateCurrentUserPasswordRequest)
-        val userId = this.getUserId()
-        val user = findById(userId.toInt())
+    override fun emailConfirmation(confirmEmailTokenRequest: ConfirmEmailTokenRequest): UserResponse<String> {
+        val userId = getUserId()
+        val user = userAccountRepository.findByConfirmationEmailToken(confirmEmailTokenRequest.confirmationEmailToken)
+            ?: throw ValidationCustomException("Invalid token", "token")
 
-        if (!user.comparePassword(updateCurrentUserPasswordRequest.passwordConfirmation)) {
-            throw ValidationCustomException("Password incorrect", "password")
+        if (user.id != userId.toInt()) {
+            throw NotFoundException("Token not found")
         }
 
-        user.updatePassword(passwordEncoder.encode(updateCurrentUserPasswordRequest.password))
+        if (user.confirmationTokenExpiry?.isBefore(LocalDateTime.now()) == true) {
+            user.confirmationEmailToken = null
+            user.confirmationTokenExpiry = null
+            user.pendingEmail = null
+            userAccountRepository.save(user)
+            throw ValidationCustomException("Token has expired", "token")
+        }
+
+        //  Update email
+        user.email = user.pendingEmail ?: throw ValidationCustomException("New email not found", "email")
+        user.confirmed = true
+        user.confirmationEmailToken = null
+        user.confirmationTokenExpiry = null
+        user.pendingEmail = null
         userAccountRepository.save(user)
-        return "Password successfully updated";
+
+        return createUserResponse(user);
     }
 
     @Transactional(rollbackFor = [Exception::class])
@@ -199,15 +227,6 @@ class UserServiceImpl(
                 throw ValidationCustomException(StatusMessage.USERNAME_BEEN_TAKEN, "username")
             }
             user.updateUsername(newUsername)
-        }
-    }
-
-    private fun updateEmailIfChange(newEmail: String, user: UserAccount) {
-        if (newEmail.isNotBlank() && newEmail != user.email) {
-            if (userAccountRepository.existsByEmail(newEmail)) {
-                throw ValidationCustomException(StatusMessage.EMAIL_TAKEN, "email")
-            }
-            user.email = newEmail
         }
     }
 
