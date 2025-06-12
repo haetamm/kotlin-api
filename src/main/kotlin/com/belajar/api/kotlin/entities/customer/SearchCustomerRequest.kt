@@ -1,9 +1,9 @@
 package com.belajar.api.kotlin.entities.customer
 
 data class SearchCustomerRequest(
-    val name: String,
-    val direction: String,
-    val sortBy: String,
-    val page: Int,
-    val size: Int,
+    val name: String? = null,
+    val direction: String = "desc",
+    val sortBy: String = "name",
+    val page: Int = 1,
+    val size: Int = 10,
 )

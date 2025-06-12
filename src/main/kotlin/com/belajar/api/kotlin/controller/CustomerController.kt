@@ -7,11 +7,13 @@ import com.belajar.api.kotlin.entities.WebResponse
 import com.belajar.api.kotlin.entities.customer.CustomerRequest
 import com.belajar.api.kotlin.entities.customer.CustomerResponse
 import com.belajar.api.kotlin.entities.customer.SearchCustomerRequest
+import com.belajar.api.kotlin.entities.customer.UpdateCustomerRequest
 import com.belajar.api.kotlin.service.CustomerService
 import com.belajar.api.kotlin.utils.Utilities
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springdoc.core.annotations.ParameterObject
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -51,20 +53,7 @@ class CustomerController(
     @SecurityRequirement(name = "Authorization")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun getAll(
-        @RequestParam(name = "name", required = false) name: String,
-        @RequestParam(name = "direction", defaultValue = "asc") direction: String,
-        @RequestParam(name = "sortBy", defaultValue = "name") sortBy: String,
-        @RequestParam(name = "page", defaultValue = "1") page: Int,
-        @RequestParam(name = "size", defaultValue = "10") size: Int
-    ): ResponseEntity<WebResponse<List<CustomerResponse>>> {
-        val request = SearchCustomerRequest(
-            name,
-            direction,
-            sortBy,
-            page,
-            size,
-        )
+    fun getAll(@ParameterObject @ModelAttribute request: SearchCustomerRequest): ResponseEntity<WebResponse<List<CustomerResponse>>> {
         val customerResponse = customerService.getAll(request)
         val paginationResponse = PaginationResponse(
             totalPages = customerResponse.totalPages,
@@ -88,7 +77,7 @@ class CustomerController(
     @SecurityRequirement(name = "Authorization")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     @PutMapping(path = ["/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE], consumes = [MediaType.APPLICATION_JSON_VALUE])
-    fun update(@RequestBody request: CustomerRequest, @PathVariable id: String): ResponseEntity<WebResponse<CustomerResponse>> =
+    fun update(@RequestBody request: UpdateCustomerRequest, @PathVariable id: String): ResponseEntity<WebResponse<CustomerResponse>> =
         utilities.handleRequest ({ customerService.update(request, id) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
 
     @Operation(summary = "Super admin and Admin delete customer")

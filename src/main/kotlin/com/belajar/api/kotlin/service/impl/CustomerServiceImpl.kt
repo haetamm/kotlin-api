@@ -3,6 +3,7 @@ package com.belajar.api.kotlin.service.impl
 import com.belajar.api.kotlin.specification.CustomerSpecification
 import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.entities.customer.*
+import com.belajar.api.kotlin.exception.BadRequestException
 import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.model.Customer
 import com.belajar.api.kotlin.repository.CustomerRepository
@@ -90,11 +91,16 @@ class CustomerServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun update(request: CustomerRequest, id: String): CustomerResponse {
+    override fun update(request: UpdateCustomerRequest, id: String): CustomerResponse {
         validationUtil.validate(request)
         val customer = getCustomerById(id)
+
+        if (customer.userAccount != null) {
+            throw BadRequestException("Member customers cannot be updated.")
+        }
         customer.name = request.name
         customer.phone = request.phoneNumber
+        customer.address = request.address
         customerRepository.saveAndFlush(customer)
         return createCustomerResponse(customer)
     }
@@ -102,6 +108,9 @@ class CustomerServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun delete(id: String): String {
         val customer = getCustomerById(id)
+        if (customer.userAccount != null) {
+            throw BadRequestException("Member customers cannot be deleted.")
+        }
         customerRepository.softDelete(customer.id.toString())
         return StatusMessage.SUCCESS_DELETE
     }
@@ -131,7 +140,9 @@ class CustomerServiceImpl(
         return CustomerResponse(
             id = customer.id!!,
             name = customer.name,
-            phoneNumber = customer.phone!!
+            phoneNumber = customer.phone!!,
+            address = customer.address,
+            member = customer.userAccount != null
         )
     }
 
