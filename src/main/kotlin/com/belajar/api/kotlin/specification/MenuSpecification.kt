@@ -12,6 +12,9 @@ class MenuSpecification {
         return Specification<Menu> { root, query, criteriaBuilder ->
             val predicates = mutableListOf<Predicate>()
 
+            // filter untuk deleted = false
+            predicates.add(criteriaBuilder.equal(root.get<Boolean>("deleted"), false))
+
             if (request.category.isNotBlank() && request.category != "all") {
                 val categoryFilter = criteriaBuilder.equal(
                     root.get<Menu>("category").get<String>("name"), // Akses category.name
@@ -37,8 +40,7 @@ class MenuSpecification {
             )
             predicates.add(priceFilter)
 
-            // Jika tidak ada predicate, kembalikan null untuk menghindari query kosong
-            if (predicates.isEmpty()) null else query.where(*predicates.toTypedArray()).restriction
+            query.where(*predicates.toTypedArray()).restriction
         }
     }
 }

@@ -9,7 +9,7 @@ interface CustomerService {
     fun saveAccount(request: NewAccountRequest): Customer
     fun saveOrGet(request: CustomerRequest): CustomerResponse
     fun saveBulk(requests: List<CustomerRequest>): List<CustomerResponse>
-    fun getById(id: String): CustomerResponse
+    fun getById(id: String): CustomerDetailResponse
     fun getAll(request: SearchCustomerRequest): Page<CustomerResponse>
     fun update(request: UpdateCustomerRequest, id: String): CustomerResponse
     fun delete(id: String): String

@@ -152,6 +152,16 @@ class BillServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
+    override fun updateStatusPayment(request: UpdateBillRequest, id: String): String {
+        val bill = findById(id)
+        val payment = bill.payment
+        if (payment != null) {
+            payment.transactionStatus = request.transactionStatus
+        }
+        return StatusMessage.SUCCESS_UPDATE
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
     override fun getById(id: String): BillResponse {
         val bill = findById(id)
         return createBillResponse(bill)
@@ -205,16 +215,11 @@ class BillServiceImpl(
         return bills.map { bill -> createBillResponse(bill) }
     }
 
-
-    @Transactional(rollbackFor = [Exception::class])
-    override fun updateStatusPayment(request: UpdateBillRequest, id: String): String {
-        val bill = findById(id)
-        val payment = bill.payment
-        if (payment != null) {
-            payment.transactionStatus = request.transactionStatus
-        }
-        return StatusMessage.SUCCESS_UPDATE
+    @Transactional(readOnly = true)
+    override fun findByCustomerId(customerId: String): List<Bill> {
+        return billRepository.findByCustomerId(customerId)
     }
+
 
     private fun findById(id: String): Bill {
         return billRepository.findById(id).orElseThrow {

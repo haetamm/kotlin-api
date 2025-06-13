@@ -10,6 +10,7 @@ import com.belajar.api.kotlin.entities.menu.UpdateMenuRequest
 import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.exception.ValidationCustomException
 import com.belajar.api.kotlin.model.Menu
+import com.belajar.api.kotlin.repository.CartItemRepository
 import com.belajar.api.kotlin.repository.MenuRepository
 import com.belajar.api.kotlin.service.CategoryService
 import com.belajar.api.kotlin.service.ImageService
@@ -30,6 +31,7 @@ class MenuServiceImpl(
     private val specification: MenuSpecification,
     private val validationUtil: ValidationUtil,
     private val categoryService: CategoryService,
+    private val cartItemRepository: CartItemRepository
 
 ): MenuService {
 
@@ -118,7 +120,12 @@ class MenuServiceImpl(
     override fun delete(id: String): String {
         val menu = findById(id)
         menuRepository.softDelete(menu.id!!)
-        imageService.softDeleteById(menu.image?.id!!)
+        val imageId = menu.image?.id
+        if (!imageId.isNullOrBlank()) {
+            imageService.softDeleteById(imageId)
+        }
+
+        cartItemRepository.deleteByMenuId(menu.id)
         return StatusMessage.SUCCESS_DELETE
     }
 
@@ -147,8 +154,12 @@ class MenuServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun findById(id: String): Menu {
-        return menuRepository.findById(id).orElseThrow {
+        val menu = menuRepository.findById(id).orElseThrow {
             throw NotFoundException(StatusMessage.MENU_NOT_FOUND)
         }
+        if (menu.deleted) {
+            throw NotFoundException(StatusMessage.MENU_NOT_FOUND)
+        }
+        return menu
     }
 }

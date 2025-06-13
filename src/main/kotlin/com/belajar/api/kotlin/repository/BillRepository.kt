@@ -6,4 +6,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.stereotype.Repository
 
 @Repository
-interface BillRepository: JpaRepository<Bill, String>, JpaSpecificationExecutor<Bill>
+interface BillRepository: JpaRepository<Bill, String>, JpaSpecificationExecutor<Bill> {
+    fun findByCustomerId(customerId: String): List<Bill>
+
+}

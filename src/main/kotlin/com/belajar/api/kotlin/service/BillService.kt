@@ -1,6 +1,7 @@
 package com.belajar.api.kotlin.service
 
 import com.belajar.api.kotlin.entities.bill.*
+import com.belajar.api.kotlin.model.Bill
 import org.springframework.data.domain.Page
 
 
@@ -12,4 +13,6 @@ interface BillService {
     fun getAll(request: SearchBillRequest): Page<BillResponse>
     fun getByCurrentUser(request: SearchBillRequest): Page<BillResponse>
     fun updateStatusPayment(request: UpdateBillRequest, id: String): String
+    fun findByCustomerId(customerId: String): List<Bill>
+
 }

@@ -4,10 +4,7 @@ import com.belajar.api.kotlin.constant.ApiUrl
 import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.entities.PaginationResponse
 import com.belajar.api.kotlin.entities.WebResponse
-import com.belajar.api.kotlin.entities.customer.CustomerRequest
-import com.belajar.api.kotlin.entities.customer.CustomerResponse
-import com.belajar.api.kotlin.entities.customer.SearchCustomerRequest
-import com.belajar.api.kotlin.entities.customer.UpdateCustomerRequest
+import com.belajar.api.kotlin.entities.customer.*
 import com.belajar.api.kotlin.service.CustomerService
 import com.belajar.api.kotlin.utils.Utilities
 import io.swagger.v3.oas.annotations.Operation
@@ -46,7 +43,7 @@ class CustomerController(
     @SecurityRequirement(name = "Authorization")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @GetMapping(path = ["/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun getById(@PathVariable id: String): ResponseEntity<WebResponse<CustomerResponse>> =
+    fun getById(@PathVariable id: String): ResponseEntity<WebResponse<CustomerDetailResponse>> =
         utilities.handleRequest ({ customerService.getById(id) }, HttpStatus.OK, StatusMessage.SUCCESS_RETRIEVE)
 
     @Operation(summary = "Super admin and Admin get all customer")

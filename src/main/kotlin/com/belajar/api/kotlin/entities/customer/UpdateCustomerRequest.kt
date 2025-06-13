@@ -14,6 +14,6 @@ data class UpdateCustomerRequest(
     val phoneNumber: String,
 
     @field:Size(max = 225)
-    var address: String,
+    var address: String?,
 )
 

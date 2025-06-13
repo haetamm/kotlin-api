@@ -3,12 +3,10 @@ package com.belajar.api.kotlin.model
 import com.belajar.api.kotlin.constant.TableName
 import jakarta.persistence.*
 import org.hibernate.annotations.SQLDelete
-import org.hibernate.annotations.Where
 
 @Entity
 @Table(name = TableName.M_MENU)
 @SQLDelete(sql = "UPDATE " + TableName.M_MENU + " SET deleted = true WHERE id = ?")
-@Where(clause = "deleted = false")
 data class Menu(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
