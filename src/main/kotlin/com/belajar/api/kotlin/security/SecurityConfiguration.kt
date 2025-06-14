@@ -1,5 +1,6 @@
 package com.belajar.api.kotlin.security
 
+import com.belajar.api.kotlin.constant.StatusMessage
 import jakarta.servlet.DispatcherType
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -27,7 +28,7 @@ class SecurityConfiguration(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .exceptionHandling {
                 it.authenticationEntryPoint { _, response, _ ->
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, StatusMessage.ACCESS_DENIED)
                 }
             }
             .authorizeHttpRequests { auth ->

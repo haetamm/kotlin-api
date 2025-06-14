@@ -83,7 +83,7 @@ class UserController(
     @PreAuthorize("hasAnyRole('SUPER_ADMIN')")
     @PutMapping(path = ["/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun disabledOrEnabledUserById (@PathVariable("id") id: String): ResponseEntity<WebResponse<String>> =
-        utilities.handleRequest ({ userService.disabledOrEnabledUserById(id.toInt()) }, HttpStatus.OK, StatusMessage.SUCCESS)
+        utilities.handleRequest ({ userService.disabledOrEnabledUserById(id) }, HttpStatus.OK, StatusMessage.SUCCESS)
 
     @Operation(summary = "Super admin and Admin get all User")
     @SecurityRequirement(name = "Authorization")

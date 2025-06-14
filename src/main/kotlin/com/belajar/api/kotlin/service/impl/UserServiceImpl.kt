@@ -10,6 +10,7 @@ import com.belajar.api.kotlin.model.UserAccount
 import com.belajar.api.kotlin.repository.UserAccountRepository
 import com.belajar.api.kotlin.service.CustomerService
 import com.belajar.api.kotlin.service.UserService
+import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
@@ -29,6 +30,7 @@ class UserServiceImpl(
     val passwordEncoder: PasswordEncoder,
     val customerService: CustomerService,
     val mailSender: JavaMailSender,
+    val utilities: Utilities,
 ): UserService {
 
     @Transactional(rollbackFor = [Exception::class])
@@ -37,25 +39,17 @@ class UserServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun getUserByUsername(username: String): UserResponse<String> {
-        val user = userAccountRepository.findByUsername(username).orElseThrow {
-            throw NotFoundException(StatusMessage.USER_NOT_FOUND)
-        }
-        return createUserResponse(user)
-    }
-
-    @Transactional(rollbackFor = [Exception::class])
     override fun getCurrentUser(): UserResponse<String> {
-        val userId = getUserId()
-        val user = findById(userId.toInt())
+        val userId = utilities.getUserId()
+        val user = findById(userId)
         return createUserResponse(user)
     }
 
     @Transactional(rollbackFor = [Exception::class])
     override fun updateCurrentUser(updateCurrentUserRequest: UpdateCurrentUserRequest): UserResponse<String> {
         validationUtil.validate(updateCurrentUserRequest)
-        val userId = this.getUserId()
-        val user = findById(userId.toInt())
+        val userId = utilities.getUserId()
+        val user = findById(userId)
 
         updateUserData(updateCurrentUserRequest, user)
         userAccountRepository.save(user)
@@ -74,8 +68,8 @@ class UserServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun updateCurrentUserPassword(updateCurrentUserPasswordRequest: UpdateCurrentUserPasswordRequest): String {
         validationUtil.validate(updateCurrentUserPasswordRequest)
-        val userId = this.getUserId()
-        val user = findById(userId.toInt())
+        val userId = utilities.getUserId()
+        val user = findById(userId)
 
         if (!user.comparePassword(updateCurrentUserPasswordRequest.passwordConfirmation)) {
             throw ValidationCustomException("Password incorrect", "password")
@@ -89,8 +83,8 @@ class UserServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun updateCurrentUserEmail(updateCurrentUserEmailRequest: UpdateCurrentUserEmailRequest): String {
         validationUtil.validate(updateCurrentUserEmailRequest)
-        val userId = this.getUserId()
-        val user = findById(userId.toInt())
+        val userId = utilities.getUserId()
+        val user = findById(userId)
 
         if (!user.comparePassword(updateCurrentUserEmailRequest.passwordConfirmation)) {
             throw ValidationCustomException("Password incorrect", "password")
@@ -123,11 +117,11 @@ class UserServiceImpl(
     }
     @Transactional(rollbackFor = [Exception::class])
     override fun emailConfirmation(confirmEmailTokenRequest: ConfirmEmailTokenRequest): UserResponse<String> {
-        val userId = getUserId()
+        val userId = utilities.getUserId()
         val user = userAccountRepository.findByConfirmationEmailToken(confirmEmailTokenRequest.confirmationEmailToken)
             ?: throw ValidationCustomException("Invalid token", "token")
 
-        if (user.id != userId.toInt()) {
+        if (user.id != userId) {
             throw NotFoundException("Token not found")
         }
 
@@ -151,8 +145,15 @@ class UserServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun disabledOrEnabledUserById(id: Int): String {
-        val user = findById(id)
+    override fun getUserByUsername(username: String): UserResponse<String> {
+        val user = findByUsername(username)
+        return createUserResponse(user)
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
+    override fun disabledOrEnabledUserById(id: String): String {
+        val rawId = utilities.decodeId(id)
+        val user = findById(rawId)
 
         if (user.roles.any { it.role == UserRoleEnum.ROLE_SUPER_ADMIN }) {
             throw ForbiddenException(StatusMessage.ACCESS_DENIED)
@@ -193,7 +194,8 @@ class UserServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun updateAdminById(id: Int, request: RegisterRequest): UserResponse<String> {
         validationUtil.validate(request)
-        val user = findById(id)
+        val rawId = utilities.decodeId(id.toString())
+        val user = findById(rawId)
 
         if (user.roles.any { it.role == UserRoleEnum.ROLE_SUPER_ADMIN } || user.roles.size == 1 && user.roles.any { it.role == UserRoleEnum.ROLE_USER }) {
             throw ForbiddenException(StatusMessage.ACCESS_DENIED)
@@ -207,14 +209,16 @@ class UserServiceImpl(
         return createUserResponse(user)
     }
 
-     fun findById(id: Int): UserAccount {
+    private fun findById(id: Int): UserAccount {
         return userAccountRepository.findById(id).orElseThrow {
             throw NotFoundException(StatusMessage.USER_NOT_FOUND)
         }
     }
 
-    private fun getUserId():String {
-        return SecurityContextHolder.getContext().authentication.name
+    private fun findByUsername(username: String): UserAccount {
+        return userAccountRepository.findByUsername(username).orElseThrow {
+            throw NotFoundException(StatusMessage.USER_NOT_FOUND)
+        }
     }
 
     private fun updateUserData(updateCurrentUserRequest: UpdateCurrentUserRequest, user: UserAccount) {
@@ -236,7 +240,7 @@ class UserServiceImpl(
     }
 
     private fun createUserResponse(user: UserAccount): UserResponse<String> {
-
+        val hashedId = utilities.encodeId(user.id!!)
         val isRegularUser = isRegularUser(user)
 
         // Hanya ambil customer jika role-nya hanya ROLE_USER
@@ -245,7 +249,7 @@ class UserServiceImpl(
         } else null
 
         return UserResponse(
-            id = user.id!!,
+            id = hashedId,
             name = customer?.name,
             phone = customer?.phone,
             address = customer?.address,

@@ -9,6 +9,7 @@ import com.belajar.api.kotlin.model.Customer
 import com.belajar.api.kotlin.repository.CustomerRepository
 import com.belajar.api.kotlin.service.BillService
 import com.belajar.api.kotlin.service.CustomerService
+import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -25,6 +26,7 @@ class CustomerServiceImpl(
     private val validationUtil: ValidationUtil,
     private val specification: CustomerSpecification,
     @Lazy private val billService: BillService,
+    private val utilities: Utilities
 ): CustomerService {
 
     @Transactional(rollbackFor = [Exception::class])
@@ -76,20 +78,22 @@ class CustomerServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun getById(id: String): CustomerDetailResponse {
-        val customer = getCustomerById(id)
+        val rawId = utilities.decodeUuid(id)
+        val customer = getCustomerById(rawId)
         val bills = billService.findByCustomerId(customer.id!!)
 
         val history = bills.map { bill ->
+            val hashedId = utilities.encodeUuid(bill.id!!)
             CustomerTransactionResponse(
-                billId = bill.id!!,
+                billId = hashedId,
                 transDate = bill.transDate.toString(),
                 transactionStatus = bill.payment?.transactionStatus ?: "UNPAID",
                 totalPayment = bill.billDetails?.sumOf { it.qty * it.price } ?: 0L
             )
         }
-
+        val hashedId = utilities.encodeUuid(customer.id)
         return CustomerDetailResponse(
-            id = customer.id ?: "",
+            id = hashedId,
             name = customer.name,
             phoneNumber = customer.phone ?: "",
             member = customer.userAccount != null,
@@ -115,7 +119,8 @@ class CustomerServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun update(request: UpdateCustomerRequest, id: String): CustomerResponse {
         validationUtil.validate(request)
-        val customer = getCustomerById(id)
+        val rawId = utilities.decodeUuid(id)
+        val customer = getCustomerById(rawId)
 
         if (customer.userAccount != null) {
             throw BadRequestException("Member customers cannot be updated.")
@@ -129,7 +134,9 @@ class CustomerServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun delete(id: String): String {
-        val customer = getCustomerById(id)
+        val rawId = utilities.decodeUuid(id)
+        val customer = getCustomerById(rawId)
+        
         if (customer.userAccount != null) {
             throw BadRequestException("Member customers cannot be deleted.")
         }
@@ -159,8 +166,9 @@ class CustomerServiceImpl(
     }
 
     private fun createCustomerResponse(customer: Customer): CustomerResponse {
+        val hashedId = utilities.encodeUuid(customer.id!!)
         return CustomerResponse(
-            id = customer.id!!,
+            id = hashedId,
             name = customer.name,
             phoneNumber = customer.phone!!,
             address = customer.address,

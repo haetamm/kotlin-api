@@ -18,6 +18,7 @@ import com.belajar.api.kotlin.repository.CartItemRepository
 import com.belajar.api.kotlin.repository.CartRepository
 import com.belajar.api.kotlin.service.*
 import com.belajar.api.kotlin.specification.BillSpecification
+import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -42,7 +43,8 @@ class BillServiceImpl(
     private val specification: BillSpecification,
     private val cartService: CartService,
     private val cartItemRepository: CartItemRepository,
-    private val cartRepository: CartRepository
+    private val cartRepository: CartRepository,
+    private val utilities: Utilities
 ): BillService {
 
     @Transactional(rollbackFor = [Exception::class])
@@ -69,7 +71,9 @@ class BillServiceImpl(
 
         val billDetails = request.billRequest.map { billDetailRequest ->
             validationUtil.validate(billDetailRequest)
-            val menu = menuService.findById(billDetailRequest.menuId)
+
+            val rawId = utilities.decodeUuid(billDetailRequest.menuId)
+            val menu = menuService.findById(rawId)
             BillDetail(
                 bill = bill,
                 menu = menu,
@@ -90,8 +94,8 @@ class BillServiceImpl(
     @Transactional(rollbackFor = [Exception::class])
     override fun createDeliveryBill(request: DeliveryBillRequest): BillResponse {
         validationUtil.validate(request)
-        val userId = getUserId()
-        val customer = customerService.getCustomerByUserId(userId.toInt())
+        val userId = utilities.getUserId()
+        val customer = customerService.getCustomerByUserId(userId)
 
         val transType = transTypeService.getById(TransTypeEnum.D.toString())
 
@@ -100,8 +104,12 @@ class BillServiceImpl(
         val cartItems = cart.items ?: emptyList()
         val cartMenuMap = cartItems.associateBy { it.menu.id }
 
+        // Decode menuIds dari request
+        val requestMenuIds = request.billRequest.map {
+            utilities.decodeUuid(it.menuId)
+        }
+
         // Validasi menuId harus ada di cart
-        val requestMenuIds = request.billRequest.map { it.menuId }
         val notInCart = requestMenuIds.filter { it !in cartMenuMap.keys }
         if (notInCart.isNotEmpty()) {
             throw BadRequestException("Menu(s) not found in cart")
@@ -122,9 +130,11 @@ class BillServiceImpl(
         billRepository.saveAndFlush(bill)
 
         // Buat BillDetail dari menu di cart
-        val billDetails = request.billRequest.map { billDetailRequest ->
+        val billDetails = request.billRequest.mapIndexed { index, billDetailRequest ->
             validationUtil.validate(billDetailRequest)
-            val menu = menuService.findById(billDetailRequest.menuId)
+            val rawMenuId = utilities.decodeUuid(billDetailRequest.menuId)
+            val menu = menuService.findById(rawMenuId)
+
             BillDetail(
                 bill = bill,
                 menu = menu,
@@ -151,9 +161,11 @@ class BillServiceImpl(
         return createBillResponse(bill)
     }
 
+
     @Transactional(rollbackFor = [Exception::class])
     override fun updateStatusPayment(request: UpdateBillRequest, id: String): String {
-        val bill = findById(id)
+        val rawId = utilities.decodeUuid(id)
+        val bill = findById(rawId)
         val payment = bill.payment
         if (payment != null) {
             payment.transactionStatus = request.transactionStatus
@@ -163,16 +175,18 @@ class BillServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun getById(id: String): BillResponse {
-        val bill = findById(id)
+        val rawId = utilities.decodeUuid(id)
+        val bill = findById(rawId)
         return createBillResponse(bill)
     }
 
     @Transactional(rollbackFor = [Exception::class])
     override fun currentUserGetById(id: String): BillResponse {
-        val bill = findById(id)
-        val userId = getUserId()
+        val rawId = utilities.decodeUuid(id)
+        val bill = findById(rawId)
+        val userId = utilities.getUserId()
 
-        if (bill.customer.userAccount?.id.toString() != userId) {
+        if (bill.customer.userAccount?.id != userId) {
             throw ForbiddenException(StatusMessage.ACCESS_DENIED)
         }
         return createBillResponse(bill)
@@ -194,7 +208,7 @@ class BillServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun getByCurrentUser(request: SearchBillRequest): Page<BillResponse> {
-        val userId = getUserId()
+        val userId = utilities.getUserId()
 
         // Filter berdasarkan userId di Customer.userAccount.id
         val userSpec = Specification<Bill> { root, _, cb ->
@@ -220,41 +234,42 @@ class BillServiceImpl(
         return billRepository.findByCustomerId(customerId)
     }
 
-
     private fun findById(id: String): Bill {
         return billRepository.findById(id).orElseThrow {
             throw NotFoundException(StatusMessage.BILL_NOT_FOUND)
         }
     }
 
-    private fun getUserId(): String {
-        return SecurityContextHolder.getContext().authentication.name
-    }
-
     private fun createBillResponse(bill: Bill): BillResponse {
         val totalPayment = bill.billDetails?.sumOf { it.qty * it.price } ?: 0L
+        val hashedId = utilities.encodeUuid(bill.id!!)
+        val hashedCustomerId = utilities.encodeUuid(bill.customer.id!!)
+        val hashedPaymentId = utilities.encodeUuid(bill.payment?.id!!)
+        val hashedPaymentToken = utilities.encodeUuid(bill.payment!!.token)
         return BillResponse(
-            id = bill.id!!,
+            id = hashedId,
             recipientName = bill.recipientName,
             phone = bill.phone ?: bill.customer.phone,
             deliveryAddress = bill.deliveryAddress,
             transDate = bill.transDate.toString(),
-            customerId = bill.customer.id!!,
+            customerId = hashedCustomerId,
             customerName = bill.customer.name,
             tableName = bill.table?.name,
             transType = bill.transType.description,
             billDetails = bill.billDetails!!.map { billDetail ->
+                val hashedBillDetailId = utilities.encodeUuid(billDetail.id!!)
+                val hashedMenuId = utilities.encodeUuid(billDetail.menu.id!!)
                 BillDetailResponse(
-                    id = billDetail.id!!,
-                    menuId = billDetail.menu.id!!,
+                    id = hashedBillDetailId,
+                    menuId = hashedMenuId,
                     name = billDetail.menu.name,
                     qty = billDetail.qty,
                     price = billDetail.price
                 )
             },
             payment = PaymentResponse(
-                id = bill.payment?.id!!,
-                token = bill.payment!!.token,
+                id = hashedPaymentId,
+                token = hashedPaymentToken,
                 transactionStatus = bill.payment!!.transactionStatus,
                 redirectUrl = bill.payment!!.redirectUrl
             ),

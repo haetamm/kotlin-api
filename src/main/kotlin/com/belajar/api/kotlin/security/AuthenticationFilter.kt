@@ -37,8 +37,13 @@ class AuthenticationFilter(
             if (bearerToken != null && jwtService.verifyJwtToken(bearerToken)) {
                 val jwtClaims = jwtService.getClaimsByToken(bearerToken)
                 val userAccount = userService.getUserById(jwtClaims.userAccountId!!.toInt())
+
+                if (!userAccount.isEnable) {
+                    throw UnauthorizedException(StatusMessage.ACCESS_DENIED)
+                }
+
                 val authentication = UsernamePasswordAuthenticationToken(
-                    userAccount.id,
+                    userAccount,
                     null,
                     userAccount.authorities
                 )
@@ -46,8 +51,11 @@ class AuthenticationFilter(
                 SecurityContextHolder.getContext().authentication = authentication
             }
         } catch (e: UnauthorizedException) {
-            throw UnauthorizedException(StatusMessage.ACCESS_DENIED)
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.message)
+            return
         }
+
         filterChain.doFilter(request, response)
     }
+
 }

@@ -16,6 +16,7 @@ import com.belajar.api.kotlin.service.CategoryService
 import com.belajar.api.kotlin.service.ImageService
 import com.belajar.api.kotlin.service.MenuService
 import com.belajar.api.kotlin.specification.MenuSpecification
+import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -31,7 +32,8 @@ class MenuServiceImpl(
     private val specification: MenuSpecification,
     private val validationUtil: ValidationUtil,
     private val categoryService: CategoryService,
-    private val cartItemRepository: CartItemRepository
+    private val cartItemRepository: CartItemRepository,
+    private val utilities: Utilities
 
 ): MenuService {
 
@@ -73,7 +75,8 @@ class MenuServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun getById(id: String): MenuResponse {
-        val menu = findById(id)
+        val rawId = utilities.decodeUuid(id)
+        val menu = findById(rawId)
         return createMenuResponse(menu)
     }
 
@@ -82,7 +85,8 @@ class MenuServiceImpl(
         validationUtil.validate(request)
         val category = categoryService.getById(request.categoryId)
 
-        val menu = findById(id)
+        val rawId = utilities.decodeUuid(id)
+        val menu = findById(rawId)
         val image = menu.image
 
         if (updateImage !== null) {
@@ -118,7 +122,8 @@ class MenuServiceImpl(
 
     @Transactional(rollbackFor = [Exception::class])
     override fun delete(id: String): String {
-        val menu = findById(id)
+        val rawId = utilities.decodeUuid(id)
+        val menu = findById(rawId)
         menuRepository.softDelete(menu.id!!)
         val imageId = menu.image?.id
         if (!imageId.isNullOrBlank()) {
@@ -142,8 +147,9 @@ class MenuServiceImpl(
                 url = "${ApiUrl.API_URL}${ApiUrl.MENU_URL}/${it.id}/images"
             )
         }
+        val hashedId = utilities.encodeUuid(menu.id!!)
         return MenuResponse(
-            id = menu.id!!,
+            id = hashedId,
             name = menu.name,
             price = menu.price,
             image = imageResponse,
