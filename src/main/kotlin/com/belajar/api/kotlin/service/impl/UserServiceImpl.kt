@@ -255,6 +255,7 @@ class UserServiceImpl(
             address = customer?.address,
             email = user.email,
             username = user.username,
+            isEnable = user.isEnable,
             roles = user.roles.mapNotNull { it.role },
             createdAt = user.createdAt.toString(),
             updatedAt = user.updatedAt.toString(),

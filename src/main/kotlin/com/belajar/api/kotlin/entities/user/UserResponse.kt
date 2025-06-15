@@ -8,6 +8,7 @@ data class UserResponse <T>(
     val address: String?,
     val email: String,
     val username: String,
+    val isEnable: Boolean,
     val roles: List<UserRoleEnum?>,
     val createdAt: String,
     val updatedAt: String,
