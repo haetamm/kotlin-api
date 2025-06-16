@@ -103,7 +103,7 @@ class UserController(
     @SecurityRequirement(name = "Authorization")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN')")
     @PutMapping(path = ["/admin/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun updateAdminById (@PathVariable("id") id: Int, @RequestBody request: RegisterRequest): ResponseEntity<WebResponse<UserResponse<String>>> =
+    fun updateAdminById (@PathVariable("id") id: String, @RequestBody request: UpdateAdminRequest): ResponseEntity<WebResponse<UserResponse<String>>> =
         utilities.handleRequest ({ userService.updateAdminById(id, request) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
 
 }

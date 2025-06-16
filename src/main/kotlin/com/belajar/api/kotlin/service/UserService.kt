@@ -14,5 +14,5 @@ interface UserService {
     fun disabledOrEnabledUserById(id: String): String
     fun getUserAll(): List<UserResponse<String>>
     fun getAdminAll(): List<UserResponse<String>>
-    fun updateAdminById(id: Int, request: RegisterRequest): UserResponse<String>
+    fun updateAdminById(id: String, request: UpdateAdminRequest): UserResponse<String>
 }

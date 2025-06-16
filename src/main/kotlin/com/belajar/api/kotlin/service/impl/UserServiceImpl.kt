@@ -14,7 +14,6 @@ import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -192,18 +191,21 @@ class UserServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun updateAdminById(id: Int, request: RegisterRequest): UserResponse<String> {
+    override fun updateAdminById(id: String, request: UpdateAdminRequest): UserResponse<String> {
         validationUtil.validate(request)
-        val rawId = utilities.decodeId(id.toString())
+        val rawId = utilities.decodeId(id)
         val user = findById(rawId)
 
         if (user.roles.any { it.role == UserRoleEnum.ROLE_SUPER_ADMIN } || user.roles.size == 1 && user.roles.any { it.role == UserRoleEnum.ROLE_USER }) {
             throw ForbiddenException(StatusMessage.ACCESS_DENIED)
         }
 
-        user.email = request.email!!
-        user.updateUsername(request.username!!)
-        user.updatePassword(passwordEncoder.encode(request.password))
+        this.updateEmailIfChange(request.email!!, user)
+        this.updateUsernameIfChange(request.username!!, user)
+
+        if (!request.password.isNullOrBlank()) {
+            user.updatePassword(passwordEncoder.encode(request.password))
+        }
 
         userAccountRepository.save(user)
         return createUserResponse(user)
@@ -231,6 +233,15 @@ class UserServiceImpl(
                 throw ValidationCustomException(StatusMessage.USERNAME_BEEN_TAKEN, "username")
             }
             user.updateUsername(newUsername)
+        }
+    }
+
+    private fun updateEmailIfChange(newEmail: String, user: UserAccount) {
+        if (newEmail.isNotBlank() && newEmail != user.email) {
+            if (userAccountRepository.existsByEmail(newEmail)) {
+                throw ValidationCustomException(StatusMessage.EMAIL_TAKEN, "email")
+            }
+            user.email = newEmail
         }
     }
 

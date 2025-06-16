@@ -51,7 +51,7 @@ class AuthController(
     @SecurityRequirement(name = "Authorization")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping(path = ["/reg/admin"], consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun regAdmin(@RequestBody request: RegisterRequest): ResponseEntity<WebResponse<RegisterResponse>> =
+    fun regAdmin(@RequestBody request: RegisterAdminRequest): ResponseEntity<WebResponse<AdminResponse>> =
         utilities.handleRequest ({ authService.registerAdmin( request) }, HttpStatus.CREATED, StatusMessage.SUCCESS_CREATE_USER)
 
     @Operation(summary = "Login")

@@ -12,6 +12,7 @@ import com.belajar.api.kotlin.service.AuthService
 import com.belajar.api.kotlin.service.CustomerService
 import com.belajar.api.kotlin.service.JwtService
 import com.belajar.api.kotlin.service.UserRoleService
+import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Value
@@ -32,9 +33,10 @@ class AuthServiceImpl(
     private val passwordEncoder: PasswordEncoder,
     private val authenticationManager: AuthenticationManager,
     private val jwtService: JwtService,
-    val validationUtil: ValidationUtil,
-    val mailSender: JavaMailSender,
-    val customerService: CustomerService,
+    private val validationUtil: ValidationUtil,
+    private val mailSender: JavaMailSender,
+    private val customerService: CustomerService,
+    private val utilities: Utilities
 ): AuthService {
 
     @Value("\${template_api.super-admin.email}")
@@ -130,20 +132,21 @@ class AuthServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun registerAdmin(request: RegisterRequest): RegisterResponse {
+    override fun registerAdmin(request: RegisterAdminRequest): AdminResponse {
         validationUtil.validate(request)
         val userRole = userRoleService.saveOrGet(UserRoleEnum.ROLE_USER)
         val adminRole = userRoleService.saveOrGet(UserRoleEnum.ROLE_ADMIN)
-        val userAccount = saveToUserAccountRepository(request, listOf(userRole, adminRole), true, null)
-
-        val roles: List<String> = userAccount.roles.map { role ->
-            role.role?.name ?: "Unknown"
-        }
-
-        return RegisterResponse(
-            username = userAccount.username,
-            roles = roles
+        val hashedPassword = passwordEncoder.encode(request.password)
+        val userAccount: UserAccount = userAccountRepository.saveAndFlush(
+            UserAccount(
+                email = request.email!!,
+                username = request.username!!,
+                password = hashedPassword,
+                roles = listOf(userRole, adminRole),
+                isEnable = true,
+            )
         )
+        return createAdminResponse(userAccount)
     }
 
     @Transactional(rollbackFor = [Exception::class])
@@ -177,6 +180,23 @@ class AuthServiceImpl(
             )
         )
         return userAccount
+    }
+
+    private fun createAdminResponse(user: UserAccount): AdminResponse {
+        val roles: List<String> = user.roles.map { role ->
+            role.role?.name ?: "Unknown"
+        }
+
+        val hashedId = utilities.encodeId(user.id!!)
+        return AdminResponse(
+            id = hashedId,
+            username = user.username,
+            email = user.email,
+            isEnable = user.isEnable,
+            roles = roles,
+            createdAt = user.createdAt.toString(),
+            updatedAt = user.updatedAt.toString()
+        )
     }
 
     private fun generateToken(): String {
