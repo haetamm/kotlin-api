@@ -74,9 +74,7 @@ class MenuController(
     ): ResponseEntity<WebResponse<MenuResponse>> =
         utilities.handleRequest({ menuService.updateById(updateMenuRequest, updateImage, id) }, HttpStatus.OK, StatusMessage.SUCCESS_UPDATE)
 
-    @Operation(summary = "Super admin, Admin and User get all menu")
-    @SecurityRequirement(name = "Authorization")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'USER')")
+    @Operation(summary = "Get all menu")
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
     fun getAll(
         @ParameterObject @ModelAttribute request: SearchMenuRequest

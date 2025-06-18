@@ -25,6 +25,9 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
+import org.springframework.mail.javamail.MimeMessageHelper
+import java.nio.file.Files
+import java.nio.file.Paths
 
 @Service
 class AuthServiceImpl(
@@ -50,6 +53,9 @@ class AuthServiceImpl(
 
     @Value("\${template_api.url-frontend}")
     private lateinit var urlFrontend: String
+
+    @Value("\${spring.mail.username}")
+    private lateinit var emailFrom: String
 
     @Transactional(rollbackFor = [Exception::class])
     @PostConstruct
@@ -85,9 +91,22 @@ class AuthServiceImpl(
             )
         )
 
-        val subject = "Confirm your email and activated your account"
-        val text = "Click the link to confirm your email: ${urlFrontend}/confirm?token=${user.confirmationToken}"
-        sendEmail(user, subject, text)
+        val subject = "Activate Your Account and Start Ordering Delicious Meals!"
+        val confirmationUrl = "$urlFrontend/confirm?token=${user.confirmationToken}"
+        val logoUrl = "$urlFrontend/img/logo.png"
+
+        // Baca template HTML dari file
+        val templatePath = Paths.get("src/main/resources/templates/email_confirm.html")
+        var htmlContent = Files.readString(templatePath)
+
+        // Ganti placeholder dengan data dinamis
+        htmlContent = htmlContent.replace("\${user.username}", user.username ?: "Foodie")
+        htmlContent = htmlContent.replace("\${confirmationUrl}", confirmationUrl)
+        htmlContent = htmlContent.replace("\${logoUrl}", logoUrl)
+
+        // Kirim email
+        sendEmail(user, subject, htmlContent)
+
         return "Check your email for confirmation link."
     }
 
@@ -108,15 +127,28 @@ class AuthServiceImpl(
         val token = generateToken()
         user.resetPasswordToken = token
         userAccountRepository.save(user)
+
         val subject = "Reset Password"
-        val text = "To reset your password, click the link below:\n ${urlFrontend}/reset-password?token=$token"
-        sendEmail(user, subject, text)
-        return "Password reset link sent to your email."
+        val resetPasswordUrl = "$urlFrontend/reset-password?token=$token"
+        val logoUrl = "$urlFrontend/img/logo.png"
+
+        // Baca template HTML dari file
+        val templatePath = Paths.get("src/main/resources/templates/reset_password.html")
+        var htmlContent = Files.readString(templatePath)
+
+        // Ganti placeholder dengan data dinamis
+        htmlContent = htmlContent.replace("\${user.username}", user.username ?: "Foodie")
+        htmlContent = htmlContent.replace("\${resetPasswordUrl}", resetPasswordUrl)
+        htmlContent = htmlContent.replace("\${logoUrl}", logoUrl)
+
+        // Kirim email
+        sendEmail(user, subject, htmlContent)
+
+        return "Check your email for confirmation link."
     }
 
     override fun validateToken(): UserAccount? {
         val userId = SecurityContextHolder.getContext().authentication.name
-        println(userId)
         return userAccountRepository.findAndGetById(userId.toInt()).orElse(null)
     }
 
@@ -203,11 +235,15 @@ class AuthServiceImpl(
         return UUID.randomUUID().toString()
     }
 
-    private fun sendEmail(user: UserAccount, subject: String, text: String) {
-        val message = SimpleMailMessage()
-        message.setTo(user.email)
-        message.subject = subject
-        message.text = text
+    private fun sendEmail(user: UserAccount, subject: String, htmlContent: String) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, true, "UTF-8")
+
+        helper.setTo(user.email)
+        helper.setSubject(subject)
+        helper.setText(htmlContent, true) // true = isHtml
+        helper.setFrom(emailFrom, "Warmakth Team")// Ganti dengan email pengirim Anda
+
         mailSender.send(message)
     }
 

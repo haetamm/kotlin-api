@@ -127,7 +127,7 @@ class MenuServiceImpl(
         menuRepository.softDelete(menu.id!!)
         val imageId = menu.image?.id
         if (!imageId.isNullOrBlank()) {
-            imageService.softDeleteById(imageId)
+            imageService.deleteById(imageId)
         }
 
         cartItemRepository.deleteByMenuId(menu.id)

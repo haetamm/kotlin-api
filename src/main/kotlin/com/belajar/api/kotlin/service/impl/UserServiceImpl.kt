@@ -21,7 +21,6 @@ import java.time.LocalDateTime
 import java.util.*
 
 
-
 @Service
 class UserServiceImpl(
     private val userAccountRepository: UserAccountRepository,
@@ -109,11 +108,12 @@ class UserServiceImpl(
             If you did not request this change, please ignore this email.
             
             Thank you,
-            Application Team
+            Warmakth Team
         """.trimIndent()
         sendEmail(user, subject, text)
         return "Confirmation token sent to ${updateCurrentUserEmailRequest.newEmail}. Please enter the token in the application."
     }
+    
     @Transactional(rollbackFor = [Exception::class])
     override fun emailConfirmation(confirmEmailTokenRequest: ConfirmEmailTokenRequest): UserResponse<String> {
         val userId = utilities.getUserId()

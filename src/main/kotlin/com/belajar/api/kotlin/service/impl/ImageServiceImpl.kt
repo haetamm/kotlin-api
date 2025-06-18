@@ -67,6 +67,20 @@ class ImageServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
+    override fun deleteById(id: String) {
+        val image = findById(id)
+        // Hapus file fisik dari sistem file
+        val filePath = Paths.get(image.path)
+        try {
+            Files.deleteIfExists(filePath)
+        } catch (e: IOException) {
+            println("Failed to delete image file: ${image.path}, error: ${e.message}")
+        }
+        // Hapus record dari database secara permanen
+        imageRepository.deleteById(id)
+    }
+
+    @Transactional(rollbackFor = [Exception::class])
     override fun updateById(id: String, updateImage: MultipartFile): Image {
         val image = findById(id)
 
