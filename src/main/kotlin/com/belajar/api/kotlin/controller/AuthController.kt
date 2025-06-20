@@ -24,6 +24,20 @@ class AuthController(
     private val utilities: Utilities
 ) {
 
+    @Operation(summary = "Guest register User with google")
+    @SecurityRequirement(name = "Authorization")
+    @PostMapping(
+        path = ["/socialite"],
+        produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun loginWithGoogle(@RequestParam code: String, @RequestParam scope: String): ResponseEntity<WebResponse<Any>> =
+        utilities.handleRequest ({ authService.socialite( code, scope) }, HttpStatus.CREATED, "Account registered")
+
+    @Operation(summary = "Guest register User with google")
+    @SecurityRequirement(name = "Authorization")
+    @PostMapping(path = ["/reg/user-google"], consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun regUserWithGoogle(@RequestBody request: RegisterWithGoogleRequest): ResponseEntity<WebResponse<LoginResponse>> =
+        utilities.handleRequest ({ authService.regUserWithGoogle( request) }, HttpStatus.CREATED, "Account registered")
+
     @Operation(summary = "Guest register User")
     @SecurityRequirement(name = "Authorization")
     @PostMapping(path = ["/reg/user"], consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])

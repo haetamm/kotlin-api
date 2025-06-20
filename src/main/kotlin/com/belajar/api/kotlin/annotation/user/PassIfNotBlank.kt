@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
 @MustBeDocumented
 @Constraint(validatedBy = [PassIfNotBlankValidator::class])
 annotation class PassIfNotBlank(
-    val message: String = "must contain only alphanumeric characters and size must be between 4 and 6",
+    val message: String = "Password must contain only alphanumeric characters and size must be between 4 and 6",
     val groups: Array<KClass<*>> = [],
     val payload: Array<KClass<out Payload>> = []
 )

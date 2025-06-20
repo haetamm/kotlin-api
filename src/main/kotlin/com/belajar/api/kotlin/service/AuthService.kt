@@ -11,4 +11,6 @@ interface AuthService {
     fun resetPassword(token: String, request: ResetPasswordRequest): String
     fun forgotPassword(request: ForgotPasswordRequest): String
     fun validateToken(): UserAccount?
+    fun socialite(code: String, scope: String): Any
+    fun regUserWithGoogle(request: RegisterWithGoogleRequest): LoginResponse
 }
