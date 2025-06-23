@@ -14,4 +14,5 @@ object TableName {
     const val M_CATEGORY = "category"
     const val M_CART = "cart"
     const val M_CART_ITEM = "cart_item"
+    const val M_NOTIFICATION = "notification"
 }

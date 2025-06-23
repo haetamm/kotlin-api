@@ -8,15 +8,11 @@ import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.model.UserAccount
 import com.belajar.api.kotlin.model.UserRole
 import com.belajar.api.kotlin.repository.UserAccountRepository
-import com.belajar.api.kotlin.service.AuthService
-import com.belajar.api.kotlin.service.CustomerService
-import com.belajar.api.kotlin.service.JwtService
-import com.belajar.api.kotlin.service.UserRoleService
+import com.belajar.api.kotlin.service.*
 import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
@@ -24,14 +20,12 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
-import org.springframework.mail.javamail.MimeMessageHelper
-import java.nio.file.Files
-import java.nio.file.Paths
 import org.springframework.http.*
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+
 
 
 @Service
@@ -42,10 +36,10 @@ class AuthServiceImpl(
     private val authenticationManager: AuthenticationManager,
     private val jwtService: JwtService,
     private val validationUtil: ValidationUtil,
-    private val mailSender: JavaMailSender,
     private val customerService: CustomerService,
     private val utilities: Utilities,
     private val restTemplate: RestTemplate,
+    private val emailService: EmailService
 ): AuthService {
 
     @Value("\${template_api.super-admin.email}")
@@ -189,18 +183,16 @@ class AuthServiceImpl(
         val subject = "Activate Your Account and Start Ordering Delicious Meals!"
         val confirmationUrl = "$urlFrontend/confirm?token=${user.confirmationToken}"
         val logoUrl = "$urlFrontend/img/logo.png"
+        val templatePath = "templates/email_confirm.html"
 
-        // Baca template HTML dari file
-        val templatePath = Paths.get("src/main/resources/templates/email_confirm.html")
-        var htmlContent = Files.readString(templatePath)
+        val variables = mapOf(
+            "user.username" to (user.username),
+            "confirmationUrl" to confirmationUrl,
+            "logoUrl" to logoUrl
+        )
 
-        // Ganti placeholder dengan data dinamis
-        htmlContent = htmlContent.replace("\${user.username}", user.username ?: "Foodie")
-        htmlContent = htmlContent.replace("\${confirmationUrl}", confirmationUrl)
-        htmlContent = htmlContent.replace("\${logoUrl}", logoUrl)
-
-        // Kirim email
-        sendEmail(user, subject, htmlContent)
+        // ✅ Kirim email dengan template
+        emailService.sendTemplateEmail(user, subject, templatePath, variables)
 
         return "Check your email for confirmation link."
     }
@@ -226,18 +218,16 @@ class AuthServiceImpl(
         val subject = "Reset Password"
         val resetPasswordUrl = "$urlFrontend/reset-password?token=$token"
         val logoUrl = "$urlFrontend/img/logo.png"
+        val templatePath = "templates/reset_password.html"
 
-        // Baca template HTML dari file
-        val templatePath = Paths.get("src/main/resources/templates/reset_password.html")
-        var htmlContent = Files.readString(templatePath)
+        val variables = mapOf(
+            "user.username" to (user.username),
+            "resetPasswordUrl" to resetPasswordUrl,
+            "logoUrl" to logoUrl
+        )
 
-        // Ganti placeholder dengan data dinamis
-        htmlContent = htmlContent.replace("\${user.username}", user.username ?: "Foodie")
-        htmlContent = htmlContent.replace("\${resetPasswordUrl}", resetPasswordUrl)
-        htmlContent = htmlContent.replace("\${logoUrl}", logoUrl)
-
-        // Kirim email
-        sendEmail(user, subject, htmlContent)
+        // ✅ Kirim email dengan template
+        emailService.sendTemplateEmail(user, subject, templatePath, variables)
 
         return "Check your email for confirmation link."
     }
@@ -322,18 +312,6 @@ class AuthServiceImpl(
 
     private fun generateToken(): String {
         return UUID.randomUUID().toString()
-    }
-
-    private fun sendEmail(user: UserAccount, subject: String, htmlContent: String) {
-        val message = mailSender.createMimeMessage()
-        val helper = MimeMessageHelper(message, true, "UTF-8")
-
-        helper.setTo(user.email)
-        helper.setSubject(subject)
-        helper.setText(htmlContent, true) // true = isHtml
-        helper.setFrom(emailFrom, "Warmakth Team")// Ganti dengan email pengirim Anda
-
-        mailSender.send(message)
     }
 
     private fun getTokenRequestParams(code: String, scope: String): MultiValueMap<String, String> {

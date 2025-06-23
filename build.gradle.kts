@@ -38,6 +38,8 @@ dependencies {
 	implementation("com.midtrans:java-library:3.0.0")
 	implementation("com.github.librepdf:openpdf:2.0.2")
 	implementation("org.hashids:hashids:1.0.3")
+	implementation("org.springframework.boot:spring-boot-starter-amqp")
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
 }
 
 tasks.withType<KotlinCompile> {

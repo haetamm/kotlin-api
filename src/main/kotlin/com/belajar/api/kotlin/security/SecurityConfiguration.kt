@@ -34,6 +34,7 @@ class SecurityConfiguration(
             .authorizeHttpRequests { auth ->
                 auth
                     .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                    .requestMatchers("/ws/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/auth/confirm/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/menus").permitAll()

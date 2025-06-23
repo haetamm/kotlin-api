@@ -4,6 +4,7 @@ import com.belajar.api.kotlin.constant.StatusMessage
 import com.belajar.api.kotlin.constant.TransTypeEnum
 import com.belajar.api.kotlin.entities.bill.*
 import com.belajar.api.kotlin.entities.bill_detail.BillDetailResponse
+import com.belajar.api.kotlin.entities.notification.EmailNotificationMessage
 import com.belajar.api.kotlin.entities.payment.PaymentResponse
 import com.belajar.api.kotlin.exception.BadRequestException
 import com.belajar.api.kotlin.exception.ForbiddenException
@@ -12,19 +13,18 @@ import com.belajar.api.kotlin.model.Bill
 import com.belajar.api.kotlin.model.BillDetail
 import com.belajar.api.kotlin.model.Customer
 import com.belajar.api.kotlin.model.TransType
-import com.belajar.api.kotlin.repository.BillDetailRepository
-import com.belajar.api.kotlin.repository.BillRepository
-import com.belajar.api.kotlin.repository.CartItemRepository
-import com.belajar.api.kotlin.repository.CartRepository
+import com.belajar.api.kotlin.repository.*
 import com.belajar.api.kotlin.service.*
 import com.belajar.api.kotlin.specification.BillSpecification
 import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
-import org.springframework.security.core.context.SecurityContextHolder
+import java.text.NumberFormat
+import java.util.Locale
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -44,7 +44,9 @@ class BillServiceImpl(
     private val cartService: CartService,
     private val cartItemRepository: CartItemRepository,
     private val cartRepository: CartRepository,
-    private val utilities: Utilities
+    private val utilities: Utilities,
+    private val userAccountRepository: UserAccountRepository,
+    private val rabbitTemplate: RabbitTemplate,
 ): BillService {
 
     @Transactional(rollbackFor = [Exception::class])
@@ -158,9 +160,31 @@ class BillServiceImpl(
         bill.payment = payment
         billRepository.saveAndFlush(bill)
 
+        // 🔔 Kirim notifikasi ke semua admin & superadmin
+        val totalAmount = calculateTotalAmount(billDetails)
+        val admins = userAccountRepository.findAll().filter { user ->
+            user.roles.any { it.role?.name in listOf("ROLE_ADMIN", "ROLE_SUPER_ADMIN") }
+        }
+
+        val subject = "Pesanan dari ${customer.name}"
+        val message = """
+                      Pesanan baru telah dibuat oleh ${customer.name} dengan total Rp. ${totalAmount},-.
+                      Silakan proses pesanan segera.
+                  """.trimIndent()
+
+        admins.forEach { admin ->
+            val notification = EmailNotificationMessage(
+                recipientEmail = admin.email,
+                subject = subject,
+                message = message,
+                billId = bill.id!!,
+                customerName = customer.name
+            )
+            rabbitTemplate.convertAndSend("email_notification", notification)
+        }
+
         return createBillResponse(bill)
     }
-
 
     @Transactional(rollbackFor = [Exception::class])
     override fun updateStatusPayment(request: UpdateBillRequest, id: String): String {
@@ -238,6 +262,12 @@ class BillServiceImpl(
         return billRepository.findById(id).orElseThrow {
             throw NotFoundException(StatusMessage.BILL_NOT_FOUND)
         }
+    }
+
+    private fun calculateTotalAmount(billDetails: List<BillDetail>): String {
+        val total = billDetails.sumOf { it.qty * it.price }
+        val formatter = NumberFormat.getNumberInstance(Locale("in", "ID"))
+        return formatter.format(total)
     }
 
     private fun createBillResponse(bill: Bill): BillResponse {

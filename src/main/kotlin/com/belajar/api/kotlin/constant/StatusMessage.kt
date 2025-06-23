@@ -21,6 +21,7 @@ object StatusMessage {
     const val EMAIL_TAKEN: String = "Email has already been taken"
     const val USER_NOT_FOUND: String = "User not found"
     const val CUSTOMER_NOT_FOUND: String = "Customer not found"
+    const val NOTIFICATION_NOT_FOUND: String = "Notification not found"
     const val TABLE_NOT_FOUND: String = "Table not found"
     const val IMAGE_NOT_FOUND: String = "Image not found"
     const val MENU_NOT_FOUND: String = "Menu not found"

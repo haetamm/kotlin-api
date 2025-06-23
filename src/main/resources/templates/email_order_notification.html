@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${subject}</title>
+    <style>
+        body {
+          font-family: "Helvetica Neue", Arial, sans-serif;
+          background-color: #f5f7fa;
+          margin: 0;
+          padding: 0;
+          color: #333;
+          line-height: 1.6;
+        }
+        .email-wrapper {
+          max-width: 600px;
+          margin: 20px auto;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        .email-content {
+          padding: 40px;
+        }
+        .email-title {
+          color: #f86901;
+          font-size: 24px;
+          margin-top: 0;
+          font-weight: 700;
+        }
+        .quote-box {
+          background: #fff9f5;
+          border-left: 4px solid #f86901;
+          padding: 20px;
+          margin: 25px 0;
+          font-style: italic;
+          color: #666;
+        }
+        .email-footer {
+          background: #2c3e50;
+          padding: 25px;
+          text-align: center;
+        }
+        .footer-logo {
+          height: 40px;
+          margin-bottom: 15px;
+        }
+        .footer-text {
+          color: #ecf0f1;
+          font-size: 13px;
+          margin: 5px 0;
+        }
+        .highlight {
+          color: #f86901;
+          font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="email-wrapper">
+    <div class="email-content">
+        <h2 class="email-title">${subject}</h2>
+
+        <p>Halo <span class="highlight">${username}</span>,</p>
+
+        <div class="quote-box">${message}</div>
+    </div>
+
+    <div class="email-footer">
+        <img src="${logoUrl}" alt="Company Logo" class="footer-logo" />
+        <p class="footer-text">© ${year} Warmakth</p>
+        <p class="footer-text">Jln. Veteran, RT/RW : 02/03, Gambir, Kecamatan Gambir, Jakarta pusat, DKI Jakarta</p>
+    </div>
+</div>
+</body>
+</html>
