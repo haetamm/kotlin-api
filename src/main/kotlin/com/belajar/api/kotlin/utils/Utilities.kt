@@ -2,7 +2,7 @@ package com.belajar.api.kotlin.utils
 
 import com.belajar.api.kotlin.entities.WebResponse
 import com.belajar.api.kotlin.exception.BadRequestException
-import com.belajar.api.kotlin.exception.NotFoundException
+import com.belajar.api.kotlin.model.BillDetail
 import com.belajar.api.kotlin.model.UserAccount
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -13,12 +13,17 @@ import java.util.*
 import org.hashids.Hashids
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.core.context.SecurityContextHolder
+import java.security.MessageDigest
+import java.text.NumberFormat
 
 @Component
 class Utilities {
 
     @Value("\${hashed.salt}")
     private lateinit var salt: String
+
+    @Value("\${midtrans.api.key}")
+    private lateinit var midtransServerKey: String
 
     private val hashids: Hashids by lazy { Hashids(salt, 8) }
 
@@ -64,4 +69,27 @@ class Utilities {
             throw RuntimeException(e)
         }
     }
+
+    internal fun verifyMidtransBodySignature(
+        orderId: String,
+        statusCode: String,
+        grossAmount: String,
+        actualSignatureKey: String
+    ): Boolean {
+        val toHash = orderId + statusCode + grossAmount + midtransServerKey
+        val expectedSignature = MessageDigest
+            .getInstance("SHA-512")
+            .digest(toHash.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+
+        return expectedSignature.equals(actualSignatureKey, ignoreCase = true)
+    }
+
+    internal fun calculateTotalAmount(billDetails: List<BillDetail>): String {
+        val total = billDetails.sumOf { it.qty * it.price }
+        val formatter = NumberFormat.getNumberInstance(Locale("in", "ID"))
+        return formatter.format(total)
+    }
+
+
 }

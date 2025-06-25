@@ -40,6 +40,7 @@ class SecurityConfiguration(
                     .requestMatchers(HttpMethod.GET, "/api/menus").permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/menus/*/images/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/payments/webhook").permitAll()
                     .anyRequest().authenticated()
             }
             .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter::class.java)

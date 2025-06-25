@@ -11,4 +11,5 @@ object ApiUrl {
     const val CATEGORY_URL: String = "/categories"
     const val CART_URL: String = "/carts"
     const val NOTIFICATION_URL: String = "/notifications"
+    const val PAYMENT_URL: String = "/payments"
 }

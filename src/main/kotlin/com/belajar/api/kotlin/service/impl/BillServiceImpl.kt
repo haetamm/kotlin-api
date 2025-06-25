@@ -5,30 +5,31 @@ import com.belajar.api.kotlin.constant.TransTypeEnum
 import com.belajar.api.kotlin.entities.bill.*
 import com.belajar.api.kotlin.entities.bill_detail.BillDetailResponse
 import com.belajar.api.kotlin.entities.notification.EmailNotificationMessage
+import com.belajar.api.kotlin.entities.notification.NotificationResponse
 import com.belajar.api.kotlin.entities.payment.PaymentResponse
 import com.belajar.api.kotlin.exception.BadRequestException
 import com.belajar.api.kotlin.exception.ForbiddenException
 import com.belajar.api.kotlin.exception.NotFoundException
-import com.belajar.api.kotlin.model.Bill
-import com.belajar.api.kotlin.model.BillDetail
-import com.belajar.api.kotlin.model.Customer
-import com.belajar.api.kotlin.model.TransType
+import com.belajar.api.kotlin.model.*
 import com.belajar.api.kotlin.repository.*
 import com.belajar.api.kotlin.service.*
 import com.belajar.api.kotlin.specification.BillSpecification
 import com.belajar.api.kotlin.utils.Utilities
 import com.belajar.api.kotlin.validation.ValidationUtil
+import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import java.text.NumberFormat
 import java.util.Locale
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.Date
+import java.time.LocalDateTime
 
 @Service
 class BillServiceImpl(
@@ -47,7 +48,12 @@ class BillServiceImpl(
     private val utilities: Utilities,
     private val userAccountRepository: UserAccountRepository,
     private val rabbitTemplate: RabbitTemplate,
-): BillService {
+    private val notificationRepository: NotificationRepository,
+    private val messagingTemplate: SimpMessagingTemplate,
+
+    ): BillService {
+
+    private val log = LoggerFactory.getLogger(PaymentServiceImpl::class.java)
 
     @Transactional(rollbackFor = [Exception::class])
     override fun createDineInBill(request: DineInBillRequest): BillResponse {
@@ -160,8 +166,8 @@ class BillServiceImpl(
         bill.payment = payment
         billRepository.saveAndFlush(bill)
 
-        // 🔔 Kirim notifikasi ke semua admin & superadmin
-        val totalAmount = calculateTotalAmount(billDetails)
+        //  Kirim notifikasi ke semua admin & superadmin
+        val totalAmount = utilities.calculateTotalAmount(billDetails)
         val admins = userAccountRepository.findAll().filter { user ->
             user.roles.any { it.role?.name in listOf("ROLE_ADMIN", "ROLE_SUPER_ADMIN") }
         }
@@ -173,28 +179,53 @@ class BillServiceImpl(
                   """.trimIndent()
 
         admins.forEach { admin ->
-            val notification = EmailNotificationMessage(
-                recipientEmail = admin.email,
-                subject = subject,
-                message = message,
-                billId = bill.id!!,
-                customerName = customer.name
-            )
-            rabbitTemplate.convertAndSend("email_notification", notification)
+            try {
+                // Save ke DB
+                val notification = Notification(
+                    title = subject,
+                    message = message,
+                    recipient = admin,
+                    isRead = false,
+                    createdAt = LocalDateTime.now(),
+                    billId = bill.id!!,
+                    customerName = customer.name
+                )
+                val saved = notificationRepository.save(notification)
+                log.info(" Notification saved for ${admin.email}, notifId=${saved.id}")
+
+                //  Kirim WebSocket
+                val hashedId = utilities.encodeId(saved.id!!)
+                val hashedBillId = utilities.encodeUuid(saved.billId)
+                val response = NotificationResponse(
+                    id = hashedId,
+                    title = saved.title,
+                    message = saved.message,
+                    billId = hashedBillId,
+                    customerName = saved.customerName,
+                    isRead = saved.isRead,
+                    createdAt = saved.createdAt.toString()
+                )
+                messagingTemplate.convertAndSendToUser(admin.username, "/queue/notifications/order", response)
+                log.info(" WebSocket sent to ${admin.username}")
+
+                //  Kirim Email tetap lewat RabbitMQ
+                val emailMsg = EmailNotificationMessage(
+                    recipientEmail = admin.email,
+                    subject = subject,
+                    message = message,
+                    billId = bill.id,
+                    customerName = customer.name
+                )
+                rabbitTemplate.convertAndSend("email_notification", emailMsg)
+
+            } catch (e: Exception) {
+                log.error("🔥 Failed processing admin ${admin.email}: ${e.message}", e)
+            }
         }
+
+
 
         return createBillResponse(bill)
-    }
-
-    @Transactional(rollbackFor = [Exception::class])
-    override fun updateStatusPayment(request: UpdateBillRequest, id: String): String {
-        val rawId = utilities.decodeUuid(id)
-        val bill = findById(rawId)
-        val payment = bill.payment
-        if (payment != null) {
-            payment.transactionStatus = request.transactionStatus
-        }
-        return StatusMessage.SUCCESS_UPDATE
     }
 
     @Transactional(rollbackFor = [Exception::class])
@@ -264,11 +295,7 @@ class BillServiceImpl(
         }
     }
 
-    private fun calculateTotalAmount(billDetails: List<BillDetail>): String {
-        val total = billDetails.sumOf { it.qty * it.price }
-        val formatter = NumberFormat.getNumberInstance(Locale("in", "ID"))
-        return formatter.format(total)
-    }
+
 
     private fun createBillResponse(bill: Bill): BillResponse {
         val totalPayment = bill.billDetails?.sumOf { it.qty * it.price } ?: 0L

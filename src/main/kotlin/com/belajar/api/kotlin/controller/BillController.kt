@@ -2,7 +2,6 @@ package com.belajar.api.kotlin.controller
 
 import com.belajar.api.kotlin.constant.ApiUrl
 import com.belajar.api.kotlin.constant.StatusMessage
-import com.belajar.api.kotlin.constant.TransTypeEnum
 import com.belajar.api.kotlin.entities.PaginationResponse
 import com.belajar.api.kotlin.entities.WebResponse
 import com.belajar.api.kotlin.entities.bill.*
@@ -10,7 +9,6 @@ import com.belajar.api.kotlin.service.BillService
 import com.belajar.api.kotlin.service.PdfService
 import com.belajar.api.kotlin.service.impl.PdfServiceImpl
 import com.belajar.api.kotlin.utils.Utilities
-import com.fasterxml.jackson.annotation.JsonFormat
 import com.lowagie.text.DocumentException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -138,17 +136,5 @@ class BillController(
         val pdfService: PdfService = PdfServiceImpl(billResponseList)
         pdfService.export(response)
     }
-
-    @Operation(summary = "Super admin and Admin update status bill")
-    @SecurityRequirement(name = "Authorization")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'USER')")
-    @PostMapping(
-        path = ["/status/{id}"],
-        consumes = [MediaType.APPLICATION_JSON_VALUE],
-        produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
-    fun updateStatus(@RequestBody request: UpdateBillRequest, @PathVariable id: String): ResponseEntity<WebResponse<String>> =
-        utilities.handleRequest({ billService.updateStatusPayment(request, id) }, HttpStatus.OK, StatusMessage.SUCCESS)
-
 
 }

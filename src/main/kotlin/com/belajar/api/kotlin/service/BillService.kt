@@ -12,7 +12,6 @@ interface BillService {
     fun currentUserGetById(id: String): BillResponse
     fun getAll(request: SearchBillRequest): Page<BillResponse>
     fun getByCurrentUser(request: SearchBillRequest): Page<BillResponse>
-    fun updateStatusPayment(request: UpdateBillRequest, id: String): String
     fun findByCustomerId(customerId: String): List<Bill>
 
 }
