@@ -144,7 +144,7 @@ class MenuServiceImpl(
             ImageResponse(
                 id = it.id!!,
                 name = it.name,
-                url = "${ApiUrl.API_URL}${ApiUrl.MENU_URL}/${it.id}/images"
+                url = it.path
             )
         }
         val hashedId = utilities.encodeUuid(menu.id!!)

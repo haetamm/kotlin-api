@@ -6,47 +6,36 @@ import com.belajar.api.kotlin.exception.NotFoundException
 import com.belajar.api.kotlin.model.Image
 import com.belajar.api.kotlin.repository.ImageRepository
 import com.belajar.api.kotlin.service.ImageService
-import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.core.io.Resource
-import org.springframework.core.io.UrlResource
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
-import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
+import org.springframework.web.reactive.function.client.WebClient
 
 @Service
 class ImageServiceImpl(
     private val imageRepository: ImageRepository,
-    @Value("\${template_api.image.path}") private val path: String
-): ImageService {
+    private var webClient: WebClient,
+    ): ImageService {
 
-    private lateinit var imagePath: Path
+    @Value("\${app.supabase.url}")
+    private lateinit var supabaseUrl: String
 
-    @PostConstruct
-    fun initPath() {
-        imagePath = Paths.get(path)
-        if (!Files.exists(imagePath)) {
-            try {
-                Files.createDirectories(imagePath)
-            } catch (e: IOException) {
-                val errorMessage = "Failed to create image directory: $path"
-                println(errorMessage)
-            }
-        }
-    }
+    @Value("\${app.supabase.api.key}")
+    private lateinit var supabaseApiKey: String
+
+    @Value("\${app.supabase.bucket}")
+    private lateinit var supabaseBucket: String
 
     @Transactional(rollbackFor = [Exception::class])
     override fun save(image: MultipartFile): Image {
-        val fileName = validateAndSaveImage(image)
-        val filePath: Path = imagePath.resolve(fileName)
+        validateImage(image)
+        val fileName = uploadToSupabaseStorage(image)
+        val publicUrl = "$supabaseUrl/storage/v1/object/public/$supabaseBucket/$fileName"
 
         val saved = Image(
             name = fileName,
-            path = filePath.toString(),
+            path = publicUrl,
             size = image.size,
             contentType = image.contentType!!
         )
@@ -54,44 +43,27 @@ class ImageServiceImpl(
     }
 
     @Transactional(rollbackFor = [Exception::class])
-    override fun getById(id: String): Resource {
-        val image = findById(id)
-        val filePath = Paths.get(image.path)
-        return UrlResource(filePath.toUri())
-    }
-
-    @Transactional(rollbackFor = [Exception::class])
-    override fun softDeleteById(id: String) {
-        val image = findById(id)
-        imageRepository.softDelete(image.id!!)
-    }
-
-    @Transactional(rollbackFor = [Exception::class])
     override fun deleteById(id: String) {
         val image = findById(id)
-        // Hapus file fisik dari sistem file
-        val filePath = Paths.get(image.path)
-        try {
-            Files.deleteIfExists(filePath)
-        } catch (e: IOException) {
-            println("Failed to delete image file: ${image.path}, error: ${e.message}")
-        }
-        // Hapus record dari database secara permanen
+        callSupabaseStorage("DELETE", image.name)
         imageRepository.deleteById(id)
     }
 
     @Transactional(rollbackFor = [Exception::class])
     override fun updateById(id: String, updateImage: MultipartFile): Image {
+        validateImage(updateImage)
         val image = findById(id)
 
-        val filePath = Paths.get(image.path)
-        Files.delete(filePath)
+        // Delete image lama
+        callSupabaseStorage("DELETE", image.name)
 
-        val newFileName = validateAndSaveImage(updateImage)
-        val newFilePath: Path = imagePath.resolve(newFileName)
+        // Upload baru
+        val newFileName = uploadToSupabaseStorage(updateImage)
+        val newPublicUrl = "$supabaseUrl/storage/v1/object/public/$supabaseBucket/$newFileName"
 
+        // Update entity
         image.name = newFileName
-        image.path = newFilePath.toString()
+        image.path = newPublicUrl
         image.size = updateImage.size
         image.contentType = updateImage.contentType!!
 
@@ -104,7 +76,7 @@ class ImageServiceImpl(
         }
     }
 
-    private fun validateAndSaveImage(image: MultipartFile): String {
+    private fun validateImage(image: MultipartFile) {
         val allowedContentTypes = listOf("image/jpg", "image/jpeg", "image/png")
         val maxSize = 307_200
 
@@ -115,11 +87,48 @@ class ImageServiceImpl(
         if (image.size > maxSize) {
             throw BadRequestException("Image size exceeds limit of 300 KB")
         }
+    }
 
-        val fileName = "${System.currentTimeMillis()}${image.originalFilename}"
-        val filePath: Path = imagePath.resolve(fileName)
-        Files.copy(image.inputStream, filePath)
+    private fun callSupabaseStorage(
+        method: String,
+        fileName: String,
+        contentType: String? = null,
+        body: ByteArray? = null
+    ) {
+        val url = "$supabaseUrl/storage/v1/object/$supabaseBucket/$fileName"
 
+        val request = when (method.uppercase()) {
+            "PUT" -> webClient.put()
+                .uri(url)
+                .header("Authorization", "Bearer $supabaseApiKey")
+                .header("Content-Type", contentType ?: "application/octet-stream")
+                .bodyValue(body!!)
+            "DELETE" -> webClient.delete()
+                .uri(url)
+                .header("Authorization", "Bearer $supabaseApiKey")
+            else -> throw BadRequestException("Unsupported method: $method")
+        }
+
+        request.retrieve()
+            .onStatus({ it.isError }) { response ->
+                response.bodyToMono(String::class.java).map {
+                    println("$method failed. Response: $it")
+                    throw BadRequestException("$method to Supabase failed: $it")
+                }.block()
+            }
+            .toBodilessEntity()
+            .block()
+    }
+
+    private fun uploadToSupabaseStorage(file: MultipartFile): String {
+        val fileName = "${System.currentTimeMillis()}-${file.originalFilename}"
+        callSupabaseStorage(
+            method = "PUT",
+            fileName = fileName,
+            contentType = file.contentType,
+            body = file.bytes
+        )
+        println("Upload success. File name: $fileName")
         return fileName
     }
 

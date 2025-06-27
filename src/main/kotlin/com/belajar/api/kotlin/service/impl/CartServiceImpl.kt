@@ -116,7 +116,7 @@ class CartServiceImpl(
             id = cartItem.id!!,
             menuId = hashedId,
             name = cartItem.menu.name,
-            image = cartItem.menu.image?.id,
+            image = cartItem.menu.image?.path,
             qty = cartItem.qty,
             price = cartItem.menu.price
         )
