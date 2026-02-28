@@ -38,5 +38,6 @@ out/
 
 ### Kotlin ###
 .kotlin
+.env
 
 storage

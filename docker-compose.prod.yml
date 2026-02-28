@@ -1,0 +1,44 @@
+version: "3.9"
+
+name: warmakth-prod
+
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: warmakth-api-prod
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - warmakth-network
+
+
+  # Ngrok (Optional)
+  # Used to expose the production container publicly.
+  # Useful when running locally and testing webhooks (e.g., Midtrans).
+  #
+  # If deploying to a VPS or using a real domain with HTTPS,
+  # this service can be safely removed or commented out.
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: warmakth-ngrok-prod
+    command: http app:8081
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - warmakth-network
+
+networks:
+  warmakth-network:
+    driver: bridge
